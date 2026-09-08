@@ -7,6 +7,8 @@ OCBF requires **Python 3.12 or later**.
 === "Windows (PowerShell)"
 
     ```powershell
+    git clone https://github.com/RayanJavan/ocbf.git
+    cd ocbf
     py -3.12 -m venv .venv
     .venv\Scripts\python -m pip install -e ".[bayes,dev]"
     ```
@@ -14,6 +16,8 @@ OCBF requires **Python 3.12 or later**.
 === "Linux / macOS"
 
     ```bash
+    git clone https://github.com/RayanJavan/ocbf.git
+    cd ocbf
     python3.12 -m venv .venv
     .venv/bin/python -m pip install -e ".[bayes,dev]"
     ```

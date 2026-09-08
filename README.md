@@ -51,6 +51,7 @@ baseline on every benchmark.
 ## Quick start
 
 ```bash
+git clone https://github.com/RayanJavan/ocbf.git && cd ocbf
 py -3.12 -m venv .venv
 .venv/Scripts/python -m pip install -e ".[bayes,dev]"
 .venv/Scripts/python -m pytest -q          # 154 tests, ~3 min
@@ -82,15 +83,16 @@ result.belief.top_contributors(ref)   # which sources moved it, and by how much
 
 | section | for |
 | --- | --- |
-| [Getting started](docs/getting-started/) | installing it and fusing a log end to end |
-| [How-to guides](docs/how-to/) | adding sources, reading beliefs, interpreting diagnostics |
-| [Explanation](docs/explanation/) | why the regime forces this design |
+| [Getting started](docs/getting-started/index.md) | installing it and fusing a log end to end |
+| [How-to guides](docs/how-to/index.md) | adding sources, reading beliefs, interpreting diagnostics |
+| [Explanation](docs/explanation/index.md) | why the regime forces this design |
 | [Research notes](docs/explanation/research-notes.md) | literature and formal grounding, ~200 references |
 | [Design record](docs/explanation/design-record.md) | the committed model, and §11 on what implementation revised |
 | [Limitations](docs/about/limitations.md) | what is not built, approximated, or assumed |
 
-The API reference is generated from docstrings by mkdocstrings and is only available in the
-built site.
+The API reference is generated from docstrings, so it exists only in the built site: serve it
+with the commands above, or download the `ocbf-site` artifact from any
+[CI run](https://github.com/RayanJavan/ocbf/actions).
 
 ## Status
 
@@ -108,7 +110,7 @@ designed but not built. Full list in [Limitations](docs/about/limitations.md).
 .venv/Scripts/mkdocs build --strict        # site
 ```
 
-Both run on every push and pull request; see [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+Both run on every push and pull request ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 `tests/test_exactness.py` is the load-bearing test: it verifies belief propagation against
 brute-force enumeration, including the cardinality forward–backward recursion that replaces
