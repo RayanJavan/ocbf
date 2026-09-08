@@ -771,6 +771,29 @@ determined — a common enough real shape, since a label can be certain while th
 not. Object attributes are unaffected: object type is clamped, so what an object's attributes
 are is known even when their values are not.
 
+### 11.13 GTSAM took the tier-1 oracle role pyAgrum was specified for
+
+§6.3 split the optional native backends two ways: pyAgrum for tier 1, the exact
+variable-elimination oracle, and GTSAM for tier 4, hybrid discrete-continuous MAP. The
+implementation collapsed that into one backend doing the tier-1 job.
+
+The oracle role is what the project actually needs, and it needs elimination rather than
+enumeration: brute force costs the product of the cardinalities and runs out well before the
+loopy structure BP actually meets, which is the only region where the approximation is worth
+measuring. GTSAM's `DiscreteFactorGraph` eliminates, so its cost is exponential in the
+treewidth instead. `ocbf.inference.gtsam_exact` is that oracle, on the discrete backbone;
+pyAgrum and ProbLog are declared in the `oracles` extra and unused.
+
+The bounded cost is one platform problem, paid once. A CUDA-enabled `gtsam.dll` imports the
+CUDA runtime by name and Windows resolves that on the DLL search path rather than on `PATH`,
+so a plain import fails with a bare "DLL load failed". `ocbf.backends` wraps the import,
+registers the toolkit directories in a stated order, and reports what the build can do and
+what the machine has *separately* — a CUDA build without a device and a device without a CUDA
+build are different problems, and one boolean would hide which one you have.
+
+Tier 4 is unchanged and unbuilt: hybrid MAP would need the continuous block expressed in
+GTSAM's hybrid factor graph, which the EP engine has no reason to produce.
+
 ---
 
 ## 12. Documentation

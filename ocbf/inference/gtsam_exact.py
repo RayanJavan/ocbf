@@ -14,8 +14,9 @@ is precisely the shape where loopy BP stops being exact and starts needing to be
 Scope, stated so it is not overread:
 
 * **Discrete backbone only.** The tier-4 role design doc section 6.3 reserves for GTSAM --
-  hybrid discrete-continuous MAP -- needs the continuous sub-block, which does not exist
-  yet. This is the tier-1 role, on the part of the model that does.
+  hybrid discrete-continuous MAP -- would need the continuous block expressed as a GTSAM
+  hybrid factor graph, which [`ocbf.inference.gabp_ep`][ocbf.inference.gabp_ep] has no reason
+  to produce. This is the tier-1 role instead; see design doc section 11.13.
 * **CPU.** GTSAM's CUDA acceleration is in its nonlinear least-squares solvers. Discrete
   elimination does not touch the GPU, and [`ocbf.backends.gtsam_backend`][ocbf.backends.gtsam_backend] reports the two
   facts separately for exactly this reason.

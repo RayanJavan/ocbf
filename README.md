@@ -9,7 +9,8 @@ sources (sparse, weak, numerous)        OCEL 2.0 schema (clamped)
               ▼                                   ▼
          ClaimSet ────────▶ par-factor graph ◀──── candidate universe
                                    │
-                    loopy BP  ◀──▶  hierarchical reliability GLM
+        loopy BP  +  Gaussian EP  ◀─┴─▶  hierarchical reliability GLM
+        (discrete)   (continuous)
                                    │
                                    ▼
                 BeliefState:  marginals · decidability flags · attribution
@@ -100,8 +101,14 @@ The **discrete backbone** is complete and tested: existence, event type, E2O/O2O
 referential integrity and type gating, soft cardinality, source channels with two-sided
 quality and silence handling, the two-block inference loop, and all three diagnostics.
 
-The **continuous layer** — latent Gaussian copula, timestamps, attributes, Gaussian EP — is
-designed but not built. Full list in [Limitations](docs/about/limitations.md).
+The **continuous layer** is complete and tested too: latent Gaussian copula over timestamps
+and ordered attributes, Gaussian EP, and the conditional-Gaussian coupling back to the
+backbone. It is additive — a world that declares nothing continuous answers exactly as a
+discrete-only run would.
+
+Not built: OCEL 2.0 file I/O, joint log sampling, entity resolution, and the GPU backend.
+Full list, with the approximations inside what *is* built, in
+[Limitations](docs/about/limitations.md).
 
 ## Repository checks
 

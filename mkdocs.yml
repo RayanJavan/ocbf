@@ -13,6 +13,13 @@ repo_name: RayanJavan/ocbf
 # documents rather than the build-time stub.
 edit_uri: blob/main/
 
+# `mkdocs build --strict` already fails on a link to a page that does not exist, but a link to
+# a *heading* that does not exist is only reported at INFO by default -- which is how a
+# cross-reference survives the section it points at being renamed. Promoting it to a warning
+# makes --strict catch that too.
+validation:
+  anchors: warn
+
 # The docs tree follows Diátaxis: tutorial / how-to / reference / explanation are kept
 # strictly separate. Each answers a different question, and blending them is the failure
 # mode the framework exists to prevent -- a how-to that explains theory helps nobody in a

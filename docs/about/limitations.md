@@ -66,8 +66,9 @@ effect — it acts where the discrete layer is confident and nowhere else.
 **Neither engine has a convergence guarantee** on this graph, and both report rather than
 pretend. Check `bp_converged` and `ep_converged` before trusting a run.
 
-Loopy BP is mitigated by damping, monitoring, brute-force verification on small subgraphs and
-honest non-convergence reporting — not by hoping. Expectation propagation has one specific
+Loopy BP is mitigated by damping, monitoring, [exact
+verification](../explanation/inference.md#the-exact-oracle) on small subgraphs and honest
+non-convergence reporting — not by hoping. Expectation propagation has one specific
 failure worth recognising: on a step-warped coordinate, such as an ordinal attribute carrying
 many claims, the tilted distribution is piecewise and the run settles into a small limit cycle
 rather than a fixed point. `ep_belief_residual` gives its amplitude in latent standard
@@ -106,7 +107,13 @@ roughly two orders of magnitude.
 
 ## Environment
 
-`gtsam` has no Windows wheels. It was specified as a tier-4 verification backend; nothing
-depends on it, and the exactness oracle is brute-force enumeration in
-`tests/test_exactness.py` instead. `pyagrum` and `problog` are installed but currently unused —
-a deviation from [design record §6.3](../explanation/design-record.md).
+`gtsam` is optional and nothing in the pipeline calls it. It backs the
+[exact oracle](../explanation/inference.md#the-exact-oracle), so a machine without it loses a
+check rather than a capability — the suite skips those tests and passes. On Windows a
+CUDA-enabled build needs the CUDA runtime on the DLL search path;
+[`ocbf.backends`][ocbf.backends] handles that and reports where it looked, and
+[Installation](../getting-started/installation.md) has the commands.
+
+`pyagrum` and `problog` are declared in the `oracles` extra and unused — a deviation from
+[design record §6.3](../explanation/design-record.md#63-engine-tiers), recorded in
+[§11.13](../explanation/design-record.md#1113-gtsam-took-the-tier-1-oracle-role-pyagrum-was-specified-for).

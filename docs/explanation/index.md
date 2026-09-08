@@ -10,8 +10,8 @@ nothing here is a set of steps.
 2. **[The model](the-model.md)** — the latent world, the factor layers, and why each one
    exists.
 3. **[Inference](inference.md)** — the two-block scheme, why belief propagation rather than
-   sampling, and why the continuous engine is the same algorithm over a different message
-   algebra.
+   sampling, why the continuous engine is the same algorithm over a different message
+   algebra, and how the approximation is checked against an exact one.
 4. **[Diagnostics](diagnostics.md)** — why identifiability, decidability and effective
    sample size are outputs rather than logging.
 

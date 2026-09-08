@@ -30,7 +30,7 @@ OCBF requires **Python 3.12 or later**.
 | `bayes` | pymc, arviz | the hierarchical reliability GLM — the parameter block |
 | `inference` | torch | reserved for the planned GPU message-passing backend |
 | `io` | pm4py | OCEL 2.0 file round-tripping *(not yet wired up)* |
-| `oracles` | pyagrum, gtsam, problog | optional exact-inference cross-checks |
+| `oracles` | gtsam, pyagrum, problog | the exact-inference oracle — only `gtsam` is wired up |
 | `docs` | mkdocs-material, mkdocstrings, … | building this site |
 | `dev` | pytest, hypothesis, matplotlib | running the test suite |
 
@@ -38,14 +38,24 @@ Without `bayes` everything still runs — the pipeline falls back to the label-f
 estimates. You lose the pooling, which in a sparse regime is most of the value, so install
 it unless you have a reason not to.
 
-!!! warning "`gtsam` has no Windows wheels"
+!!! tip "`gtsam` is optional, and on Windows it needs the CUDA runtime on the DLL path"
 
-    It is an optional verification backend under `oracles` and nothing depends on it. On
-    Windows, install the other oracles individually rather than the whole extra:
+    GTSAM backs the [exact oracle](../explanation/inference.md#the-exact-oracle). Nothing in
+    the pipeline calls it, so skipping it loses a check rather than a capability — the suite
+    skips those tests and passes without it.
+
+    A CUDA-enabled `gtsam.dll` imports the CUDA runtime by name, and Windows resolves that on
+    the *DLL search path* rather than on `PATH`, so a plain `import gtsam` fails with a bare
+    "DLL load failed". [`ocbf.backends`][ocbf.backends] is the fix: it registers the toolkit
+    directories once, and every consumer imports through it.
 
     ```powershell
-    .venv\Scripts\python -m pip install pyagrum problog
+    .venv\Scripts\python -m pip install gtsam
+    .venv\Scripts\python -c "from ocbf.backends import report; print(report())"
     ```
+
+    `report()` names the directories it searched, so a failure is a path to fix rather than a
+    hex address. Set `OCBF_CUDA_BIN` if your toolkit is somewhere non-standard.
 
 ## Verify
 
@@ -53,7 +63,7 @@ it unless you have a reason not to.
 .venv/Scripts/python -m pytest -q
 ```
 
-Expect **76 passed**. The run takes roughly two minutes, most of it in the end-to-end
+Expect **154 passed**. The run takes about three minutes, most of it in the end-to-end
 tests in `tests/test_pipeline.py`, which fuse real generated worlds rather than fixtures.
 
 To check the numerics specifically:

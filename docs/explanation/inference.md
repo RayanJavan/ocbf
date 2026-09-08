@@ -64,6 +64,31 @@ variable's own outgoing message from its belief, so with hard factors both terms
 sentinel and the subtraction is only meaningful if the finite remainder survived the addition.
 At `-1e4` it does, with room for a hundred stacked constraints.
 
+## The exact oracle
+
+Belief propagation has no convergence guarantee on this graph, so the approximation has to be
+*measured* rather than assumed. That needs an engine whose answer is exact.
+
+Brute-force enumeration is the obvious one, and it is what `tests/test_exactness.py` uses. It
+costs the product of the cardinalities, so it runs out at a handful of variables — well short
+of the loopy structure the engine actually meets, which is the only place the approximation is
+interesting. Exact *elimination* costs exponentially in the **treewidth** instead, so a dozen
+cardinality groups coupled through shared endpoints is hopeless to enumerate and unremarkable
+to eliminate. [`ocbf.inference.gtsam_exact`][ocbf.inference.gtsam_exact] translates the
+discrete backbone into GTSAM's `DiscreteFactorGraph` and does exactly that;
+[`compare_to_exact`][ocbf.inference.gtsam_exact.compare_to_exact] reports the gap.
+
+Elimination has no iteration cap — it finishes or it exhausts memory — so its limits have to
+be predictive rather than reactive.
+[`elimination_cost`][ocbf.inference.gtsam_exact.elimination_cost] bounds the largest
+intermediate factor the ordering will build, and a 36-variable graph can be far more expensive
+than a 60-variable one.
+
+The oracle is optional and never on the pipeline's path: it is imported lazily through
+[`ocbf.backends`][ocbf.backends], and a machine without GTSAM loses a check rather than a
+capability. See [design record §11.13](design-record.md#1113-gtsam-took-the-tier-1-oracle-role-pyagrum-was-specified-for)
+for why this backend rather than the one originally specified.
+
 ## Initialisation
 
 EM on a non-convex truth-discovery objective has bad local optima, and the literature's answer
