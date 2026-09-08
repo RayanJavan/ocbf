@@ -787,7 +787,7 @@ in a hurry; an explanation interrupted by commands teaches nothing.
 | API reference | information | "what does this function do" |
 | Explanation | understanding | "why is it built this way" |
 
-Three conventions worth recording, because each was a decision rather than a default.
+Four conventions worth recording, because each was a decision rather than a default.
 
 **The API reference is generated, never written.** `scripts/gen_ref_pages.py` emits one stub
 per module at build time via `mkdocs-gen-files`, and `mkdocs-literate-nav` reads the
@@ -812,10 +812,11 @@ plumbing to its signature. Mechanically generated one-liners were rejected: text
 "Return the events." looks like documentation without being any, which makes a reference
 worse rather than better.
 
-**The docs are checked like code.** `mkdocs build --strict` is the gate: it fails the build
-on an unresolved internal link, an unrecognised mkdocstrings identifier, or a page absent
-from the nav, and it runs in CI on every push. Cross-linking an idea from several places is
-good practice; copying the paragraph is a maintenance trap, because the copies drift.
+**The docs are checked like code.** `mkdocs build --strict` is the gate, and it runs in CI
+on every push: an unresolved internal link, an unrecognised mkdocstrings identifier or a page
+missing from the nav fails the build rather than printing a warning nobody reads. What it
+cannot check is duplication, so that stays a convention — cross-link an idea from several
+places, but do not copy the paragraph, because the copies drift.
 
 For agent consumption the site publishes `llms.txt` via `mkdocs-llmstxt`, with sections
 ordered as the intended reading order.

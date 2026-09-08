@@ -7,11 +7,10 @@ puts the files into MkDocs' virtual file system for that one build.
 
 Two conventions are load-bearing:
 
-* A package's ``__init__`` becomes the section's ``index.md`` rather than a leaf page, which
-  is what Material's ``navigation.indexes`` feature binds to. The ``mkdocs-section-index``
-  plugin does the same job and conflicts with it -- do not add both.
-* The nav is handed to ``mkdocs-literate-nav`` as ``reference/SUMMARY.md``. That is why
-  ``mkdocs.yml`` says ``- API reference: reference/`` with a trailing slash; the slash is
+* A package's ``__init__`` becomes its section's ``index.md`` rather than a leaf page, which
+  is what Material's ``navigation.indexes`` feature binds to.
+* The nav goes to ``mkdocs-literate-nav`` as ``reference/SUMMARY.md``. That is why
+  ``mkdocs.yml`` says ``- API reference: reference/`` with a trailing slash: the slash is
   what tells literate-nav to look for a summary file there.
 """
 

@@ -2,17 +2,15 @@ site_name: OCBF
 site_description: >-
   Object-Centric Belief Fusion — a joint probabilistic belief over a latent OCEL 2.0 log,
   fused from many sparse, unreliable, structurally-typed sources.
-# The repository is private and the account is on the GitHub Free plan, where Pages is not
-# available for private repositories -- so no site is published at site_url today. It is set
-# anyway because mkdocs-llmstxt requires it to build absolute links, and it names the address
-# the site would occupy if Pages is ever enabled, so nothing has to change here when it is.
-# Until then the site is a CI artifact: see .github/workflows/ci.yml.
+# mkdocs-llmstxt needs an absolute base to build its links from, so site_url has to be set
+# even though nothing is published there: Pages is unavailable for private repositories on
+# the GitHub Free plan, and the site ships as a CI artifact instead. The value names where
+# Pages would land, so turning it on later changes nothing here.
 site_url: https://rayanjavan.github.io/ocbf/
 repo_url: https://github.com/RayanJavan/ocbf
 repo_name: RayanJavan/ocbf
-# "Edit this page" targets the source file. For the generated API reference that is the
-# module itself, not the build-time stub, which scripts/gen_ref_pages.py arranges via
-# mkdocs_gen_files.set_edit_path.
+# "Edit this page" targets the source file -- for a generated reference page, the module it
+# documents rather than the build-time stub.
 edit_uri: blob/main/
 
 # The docs tree follows Diátaxis: tutorial / how-to / reference / explanation are kept
