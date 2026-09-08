@@ -1,0 +1,176 @@
+site_name: OCBF
+site_description: >-
+  Object-Centric Belief Fusion — a joint probabilistic belief over a latent OCEL 2.0 log,
+  fused from many sparse, unreliable, structurally-typed sources.
+# The repository is private and the account is on the GitHub Free plan, where Pages is not
+# available for private repositories -- so no site is published at site_url today. It is set
+# anyway because mkdocs-llmstxt requires it to build absolute links, and it names the address
+# the site would occupy if Pages is ever enabled, so nothing has to change here when it is.
+# Until then the site is a CI artifact: see .github/workflows/ci.yml.
+site_url: https://rayanjavan.github.io/ocbf/
+repo_url: https://github.com/RayanJavan/ocbf
+repo_name: RayanJavan/ocbf
+# "Edit this page" targets the source file. For the generated API reference that is the
+# module itself, not the build-time stub, which scripts/gen_ref_pages.py arranges via
+# mkdocs_gen_files.set_edit_path.
+edit_uri: blob/main/
+
+# The docs tree follows Diátaxis: tutorial / how-to / reference / explanation are kept
+# strictly separate. Each answers a different question, and blending them is the failure
+# mode the framework exists to prevent -- a how-to that explains theory helps nobody in a
+# hurry, and an explanation interrupted by commands teaches nothing.
+nav:
+  - Home: index.md
+  - Getting started:
+      - getting-started/index.md
+      - Installation: getting-started/installation.md
+      - Quickstart: getting-started/quickstart.md
+  - How-to guides:
+      - how-to/index.md
+      - Add your own source: how-to/add-a-source.md
+      - Inspect a belief state: how-to/inspect-beliefs.md
+      - Fuse timestamps and attributes: how-to/fuse-continuous.md
+      - Read the diagnostics: how-to/read-diagnostics.md
+      - Configure constraints: how-to/configure-constraints.md
+      - Benchmark against baselines: how-to/compare-baselines.md
+  - Explanation:
+      - explanation/index.md
+      - The regime: explanation/the-regime.md
+      - The model: explanation/the-model.md
+      - Inference: explanation/inference.md
+      - Diagnostics: explanation/diagnostics.md
+      - Research notes: explanation/research-notes.md
+      - Design record: explanation/design-record.md
+  - API reference: reference/
+  - About:
+      - about/index.md
+      - Limitations: about/limitations.md
+      - Glossary: about/glossary.md
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    # navigation.indexes binds a section's index.md to the section itself. This replaces
+    # the mkdocs-section-index plugin, which conflicts with it -- do not add both.
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tooltips
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      permalink_title: Link to this section
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.arithmatex:
+      generic: true
+
+plugins:
+  - search
+  # Generates one Markdown stub per module at build time, so the API reference cannot
+  # drift out of sync with the package the way a hand-maintained page would.
+  - gen-files:
+      scripts:
+        - scripts/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [.]
+          # Cross-link into the stdlib and our numeric dependencies, so annotations like
+          # numpy.ndarray resolve to their upstream documentation instead of dead text.
+          inventories:
+            - https://docs.python.org/3/objects.inv
+            - https://numpy.org/doc/stable/objects.inv
+          options:
+            # -- docstrings ---------------------------------------------------------
+            docstring_style: google
+            docstring_section_style: table
+            merge_init_into_class: true
+            # Show every public member. In a reference, a member that exists but is not
+            # listed is a hole -- the reader cannot tell "absent" from "undocumented".
+            show_if_no_docstring: true
+            # -- headings -----------------------------------------------------------
+            heading_level: 2
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            # -- members ------------------------------------------------------------
+            inherited_members: false
+            members_order: source
+            filters: ["!^_"]
+            summary: true
+            # -- signatures ---------------------------------------------------------
+            separate_signature: true
+            show_signature_annotations: true
+            signature_crossrefs: true
+            line_length: 88
+            # -- source -------------------------------------------------------------
+            show_source: true
+            show_labels: true
+  # Publishes llms.txt / llms-full.txt so an agent can consume the whole site as text.
+  # The nav order below is the reading order an agent should follow.
+  - llmstxt:
+      markdown_description: >-
+        OCBF fuses many sparse, individually unreliable, structurally-typed sources into a
+        joint probabilistic belief over a latent OCEL 2.0 object-centric event log.
+      sections:
+        Getting started:
+          - getting-started/*.md
+        How-to guides:
+          - how-to/*.md
+        Explanation:
+          - explanation/*.md
+        About:
+          - about/*.md
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+watch:
+  - ocbf
