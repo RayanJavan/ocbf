@@ -1,0 +1,17 @@
+# Normalise line endings on commit. Development happens on Windows and CI runs on Linux,
+# so without this every file round-trips through CRLF and diffs fill up with whole-file
+# rewrites. Working copies still get native endings on checkout; only the blobs are LF.
+* text=auto eol=lf
+
+# Never touched by the eol rules above.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff  binary
+*.woff2 binary
+
+# Notebooks are JSON: diffing them line-by-line is noise, so collapse them in reviews.
+*.ipynb linguist-documentation
+
+# Prose should not skew the repository language statistics toward Markdown.
+docs/**            linguist-documentation

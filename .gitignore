@@ -1,0 +1,30 @@
+# Build output
+site/
+*.egg-info/
+build/
+dist/
+
+# Environments
+.venv/
+venv/
+
+# Caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Test and coverage artefacts
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
