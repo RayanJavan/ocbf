@@ -1,0 +1,83 @@
+# The two gates the README names, run on every push and pull request.
+#
+# They are separate jobs on purpose: the library suite and the documentation build fail for
+# unrelated reasons, and a red check should say which one without anyone opening the log.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A second push to the same branch makes the first run's answer irrelevant, so cancel it.
+# Runs on main are exempt: its history is the record of what actually passed.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  # The mkdocs-material build prints a long unsolicited advisory otherwise.
+  DISABLE_MKDOCS_2_WARNING: "true"
+
+jobs:
+  tests:
+    name: Test suite (Python 3.12)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # 3.12 is the floor declared in pyproject.toml, and testing the floor is what
+          # catches a dependency that has quietly moved past it.
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      # bayes is not optional for the suite despite the name: the hierarchical reliability
+      # fit imports PyMC lazily, and test_pipeline.py exercises that path.
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[bayes,dev]"
+
+      # GTSAM is not installed here. tests/test_gtsam_oracle.py skips its oracle checks
+      # when the backend is absent and still runs the plumbing tests, which is the point.
+      - name: Run tests
+        run: python -m pytest -q
+
+  docs:
+    name: Documentation build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      # The package itself is installed, not just the docs extras: mkdocstrings imports
+      # ocbf to read its signatures, and scripts/gen_ref_pages.py walks the same tree.
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[docs]"
+
+      # --strict turns unresolved links, unknown mkdocstrings identifiers and pages missing
+      # from the nav into failures rather than warnings nobody reads.
+      - name: Build site
+        run: mkdocs build --strict
+
+      # GitHub Pages is unavailable for private repositories on the Free plan, so the site
+      # ships as an artifact: download it from the run summary and open index.html.
+      - name: Upload site
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocbf-site
+          path: site/
+          retention-days: 14
