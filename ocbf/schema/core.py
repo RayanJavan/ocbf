@@ -1,17 +1,8 @@
-"""Core OCEL 2.0 schema objects.
+"""Object-centric semantic types and qualifier signatures.
 
-Mirrors Definition 2 of the OCEL 2.0 specification (arXiv:2403.01975), with three
-additions the specification leaves to the modeller and that we need in order to build a
-probabilistic model on top of it:
-
-* **multiplicities** on qualified relations -- the cardinality factors of design doc
-  section 3.1 have nothing to ground against otherwise;
-* **lifecycle orderings** per object type -- the soft precedence factors of section 3.3;
-* **attribute kinds** -- the latent Gaussian copula of section 4 needs to know which
-  marginal transform applies to each attribute.
-
-Everything here is frozen and hashable: the schema is clamped, so nothing in it should
-ever be mutated after construction.
+The schema describes event/object types, attributes, qualified E2O/O2O relations and
+lifecycle declarations. It does not infer source meaning, object identity or evidence
+reliability. A candidate universe instantiates these types for a bounded calculation.
 """
 
 from __future__ import annotations
@@ -22,13 +13,7 @@ from enum import Enum
 
 
 class AttributeKind(str, Enum):
-    """How an attribute enters the model.
-
-    The first five kinds are handled by the latent Gaussian copula layer (design doc
-    section 4.1). ``CATEGORICAL`` deliberately is not: unordered categoricals have no
-    monotone transform to a latent Gaussian and stay in the discrete layer. That boundary
-    is a real limitation of the copula approach, and naming it here keeps it visible.
-    """
+    """Declared attribute value kind. Ordered values can use the standalone copula transforms; unordered categorical values cannot. A schema declaration alone does not imply support in every compiler or observation channel."""
 
     CONTINUOUS = "continuous"
     COUNT = "count"
@@ -109,12 +94,9 @@ class ObjectType:
 
 @dataclass(frozen=True, slots=True)
 class Multiplicity:
-    """Declared cardinality of a qualified relation, as a closed interval.
+    """Closed interval of declared relation cardinalities; ``hi=None`` is unbounded.
 
-    ``hi=None`` means unbounded. Per design doc section 3.4 multiplicity is a *domain
-    belief*, not a definitional rule, so this becomes a soft counting factor rather than a
-    hard constraint -- real logs violate their own schemas.
-    """
+    The caller classifies its role as definitional support, descriptive assumption or normative reference. The declaration alone does not choose a probabilistic penalty."""
 
     lo: int = 0
     hi: int | None = None
@@ -144,12 +126,7 @@ AT_LEAST_ONE = Multiplicity(1, None)
 
 @dataclass(frozen=True, slots=True)
 class E2OQualifier:
-    """A legal ``(event type, qualifier, object type)`` signature.
-
-    The set of these *is* the qualifier-legality prune of design doc section 2.3, which is
-    the single most effective scalability lever available: it cuts the naive
-    ``|E| x |Q| x |O|`` E2O candidate space by two to four orders of magnitude.
-    """
+    """Legal ``(event type, qualifier, object type)`` signature. Candidate relation enumeration uses these signatures to exclude incompatible endpoint types."""
 
     qualifier: str
     event_type: str
@@ -177,12 +154,9 @@ class O2OQualifier:
 
 @dataclass(frozen=True, slots=True)
 class Lifecycle:
-    """Soft precedence structure for one object type.
+    """Declared precedence pairs for one object type.
 
-    ``precedes`` holds ``(before, after)`` event-type pairs that are expected to occur in
-    that order among the events attached to a single object of this type. Per design doc
-    section 3.4 this is a domain belief, so it becomes a soft truncation factor.
-    """
+    ``precedes`` contains ``(before, after)`` event-type names. Canonical temporal factors require explicit same-object endpoint bindings and a declared constraint role."""
 
     object_type: str
     precedes: frozenset[tuple[str, str]] = frozenset()
@@ -314,12 +288,7 @@ class Schema:
     def legal_e2o_for(
         self, event_type_support: Iterable[str], object_type: str
     ) -> frozenset[str]:
-        """Qualifiers legal for *some* event type in the support.
-
-        Because ``T_e`` is latent (design doc section 1.1), a candidate link survives the
-        signature prune if any type still in the event's support makes it legal. This is
-        the exact predicate used by ``ocbf.universe``.
-        """
+        """Return qualifier signatures legal for at least one candidate event type. This is a support-enumeration check; the selected event type can impose further canonical constraints."""
         support = set(event_type_support)
         return frozenset(
             q.qualifier
@@ -341,12 +310,7 @@ class Schema:
         raise KeyError(f"no type declares attribute {attribute!r}")
 
     def event_types_declaring(self, attribute: str) -> frozenset[str]:
-        """Event types for which ``attribute`` is in-domain.
-
-        Used by the attribute-domain gate: because ``T_e`` is latent, an event attribute
-        variable carries an explicit ``NA`` state that is forced whenever ``T_e`` falls
-        outside this set (design doc section 2.2).
-        """
+        """Return event types that declare the attribute. Consumers must distinguish a missing value from a value outside the selected type's domain."""
         return frozenset(
             et.name for et in self._event_types.values() if attribute in et.attribute_names
         )

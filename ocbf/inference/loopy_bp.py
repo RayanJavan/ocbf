@@ -173,18 +173,7 @@ def _is_oscillating(history: list[float], window: int) -> bool:
 def fill_belief_state(
     builder: BeliefStateBuilder, graph: FactorGraph, result: BPResult
 ) -> BeliefStateBuilder:
-    """Write the discrete backbone's posteriors into a belief-state builder.
-
-    Separate from sealing the state because a hybrid run has two engines writing into one
-    builder and neither of them owns the result;
-    [`ocbf.inference.gabp_ep.fill_belief_state`][ocbf.inference.gabp_ep.fill_belief_state]
-    is its mirror image over the Gaussian block.
-
-    Attribution is extracted here and costs nothing extra: for a binary assertion the
-    posterior log-odds decomposes additively over incoming messages, so each unary edge's
-    log-ratio *is* that source's contribution (design doc section 6.5). It is the retained
-    messages, not a second computation.
-    """
+    """Copy numerical posterior summaries and incoming-message decompositions into a belief-state builder. Sealing remains a separate operation so callers can supply both discrete and continuous summaries."""
     reg = graph.registry
     probs = np.exp(result.log_beliefs)
 

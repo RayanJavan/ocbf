@@ -1,32 +1,6 @@
-"""Label-free moment estimators for source reliability.
+"""Independent moment estimators for static source reliability.
 
-The triplet method. In the +/-1 encoding, if sources ``i``, ``j``, ``k`` are conditionally
-independent given the latent truth ``z``, then with ``a_i = E[y_i z]``,
-
-```text
-E[y_i y_j] = a_i a_j          =>    a_i^2 = ( M_ij * M_ik ) / M_jk
-```
-
-so every triplet yields a closed-form accuracy for each of its members with **no labels**.
-Its virtues in our regime are exactly the ones Stage 1 section 4.3 asks for: it costs
-nothing, it needs only second-order statistics, and it gives the outer EM loop a starting
-point far from the bad local optima that plague truth-discovery objectives.
-
-Its limits are equally sharp, and both are reported rather than hidden:
-
-* it needs **overlap** -- three sources that co-claim enough assertions. In a thin claim
-  graph most triplets do not exist, which is the same scarcity that drives the
-  identifiability condition of design doc section 7.1;
-* it determines ``a_i`` only up to **sign**. Resolving it by assuming sources are
-  better than chance is the symmetry-breaker of Stage 1 section 10 item 1, and it is
-  exactly the ambiguity that a bipartite overlap component cannot resolve at all.
-
-[`pairwise_channels`][ocbf.reliability.moments.pairwise_channels] is the continuous
-counterpart, and it is here rather than beside the copula because it is the same idea:
-second-order statistics of what sources say *to each other*, with no labels, and with the
-same shape of limitation -- it needs overlap, and it identifies biases only up to a common
-offset.
-"""
+For conditionally independent binary reports in +/-1 encoding, pairwise agreement satisfies ``E[x_i*x_j] = beta_i*beta_j``. Triplets estimate oriented source accuracies under an explicit better-than-chance assumption. Missing overlap falls back to the supplied assumption, not measured evidence. Pairwise continuous comparisons estimate relative bias and noise under their own assumptions. Canonical inference does not invoke these estimators."""
 
 from __future__ import annotations
 
@@ -82,10 +56,7 @@ class BinaryClaimTable:
         return self._ref_index[ref]
 
     def overlap_counts(self) -> np.ndarray:
-        """``int[n_s, n_s]`` of co-claimed assertion counts.
-
-        The support of this matrix *is* the source overlap graph of design doc section 7.1.
-        """
+        """Return the pairwise source overlap counts as an integer matrix. Its nonzero support defines the static-source overlap graph."""
         m = self.mask.astype(np.int32)
         return m @ m.T
 
@@ -152,13 +123,7 @@ def triplet_accuracies(
     floor: float = 0.5,
     ceiling: float = 0.99,
 ) -> TripletEstimate:
-    """Estimate per-source accuracy from pairwise agreements alone.
-
-    ``default_accuracy`` is what a source with insufficient overlap receives. It is a
-    *prior*, and reporting it in ``uncovered`` is how the caller learns that a source's
-    weight is assumed rather than measured -- the ``PRIOR_ONLY`` verdict of design doc
-    section 7.1.
-    """
+    """Estimate oriented static-source accuracy from pairwise agreements. Sources with insufficient overlap receive ``default_accuracy`` as an explicit assumption. Prior strength is not additional observed evidence."""
     table = BinaryClaimTable(claim_set)
     n = len(table.sources)
     if n < 3:

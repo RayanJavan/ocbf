@@ -1,13 +1,9 @@
-"""The constraint register: which structural rules are hard, and which are soft.
+"""Constraint roles and strengths supplied explicitly by the caller.
 
-Design doc section 3.4 (Stage 1 decision 6): **hard zero factors for definitional schema
-rules, soft high-weight penalties for domain beliefs**. The distinction is not cosmetic --
-a hard factor that is wrong assigns probability zero to the truth and no amount of
-evidence recovers it, whereas a soft one degrades gracefully. Section 8.3 makes that
-claim testable by deliberately misspecifying a constraint and measuring the damage.
-
-The defaults below encode decision 6. They are overridable per constraint class, because
-the decision fixes the defaults, not a straitjacket.
+Definitional support excludes impossible states. Descriptive constraints encode model
+assumptions, while normative references belong to query evaluation. Classify catalogue
+multiplicities before canonical compilation; a domain preference is not automatically a
+support restriction.
 """
 
 from __future__ import annotations
@@ -60,30 +56,16 @@ class ConstraintClass(str, Enum):
     """Monotone or state-machine-constrained attribute trajectories. Soft."""
 
     FUNCTIONAL_UNIQUENESS = "functional_uniqueness"
-    """At most one true value for a declared-exclusive attribute at an instant. Soft.
-
-    Only applied where exclusivity is *declared*. Stage 1 section 3.1 is emphatic that
-    many object-centric assertions are legitimately multi-valued -- an event has many E2O
-    edges -- so exclusivity is never assumed globally.
-    """
+    """Exclusivity where explicitly declared. A shared object-centric event can legitimately relate to several objects."""
 
 
 @dataclass(frozen=True, slots=True)
 class ConstraintSpec:
-    """How one constraint class is realised.
+    """Constraint-class configuration with explicit strength, weight and activation.
 
-    ``weight`` is **dimensionless**: a multiplier on the evidence scale computed by
-    [`calibrate_constraint_scale`][ocbf.model.build.calibrate_constraint_scale], which is the Chernoff information
-    of a typical single claim. So ``weight=1.0`` means "one unit of violation costs about
-    what one confident claim is worth", and a handful of claims can overrule a misstated
-    schema belief.
-
-    Expressing the weight in raw nats would tie its meaning to a particular source pool: the
-    same number would be a gentle nudge against strong sources and an unbreakable rule
-    against weak ones. Since the whole point of registering domain beliefs as SOFT is that
-    evidence can win, the weight has to be denominated in units of evidence.
-
-    Ignored for hard constraints.
+    The consumer defines the supported weight semantics. Canonical compilation uses the
+    declared support/descriptive/normative role; this value does not calibrate a penalty
+    against source quality. Weight is ignored for hard support constraints.
     """
 
     constraint: ConstraintClass
@@ -173,11 +155,9 @@ class ConstraintRegister:
 
     @property
     def guarantees_valid_samples(self) -> bool:
-        """Whether every definitional constraint is still hard and enabled.
+        """Check whether all declared definitional constraints remain enabled and hard.
 
-        Design doc section 6.4 promises that posterior samples are valid OCEL 2.0 logs.
-        That promise holds exactly when this is ``True``.
-        """
+        This is a configuration check only. It does not validate a compiler, solver, decoded history or standard OCEL file. Canonical support requires its own compilation and numerical checks."""
         definitional = (
             ConstraintClass.REFERENTIAL_INTEGRITY,
             ConstraintClass.ATTRIBUTE_DOMAIN,

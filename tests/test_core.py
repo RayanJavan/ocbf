@@ -98,7 +98,7 @@ def test_default_register_matches_decision_six():
 
 
 def test_relaxing_a_definitional_constraint_voids_the_sample_guarantee():
-    """Design doc section 6.4 promises valid OCEL samples only while these stay hard."""
+    """Relaxing a definitional constraint voids the sample guarantee."""
     reg = ConstraintRegister().override(
         ConstraintClass.REFERENTIAL_INTEGRITY, strength=Strength.SOFT, weight=5.0
     )

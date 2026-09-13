@@ -1,18 +1,8 @@
-"""Source reliability: estimating who to trust, without ground truth.
+"""Explicit parameter values and independent source-estimation utilities.
 
-The sparse regime forbids a free parameter per source (Stage 1 section 4.3): a source with
-three claims has an accuracy estimate with a standard error near 0.29. Everything here
-exists to get statistical strength from somewhere other than the source's own claim count.
-
-* [`ocbf.reliability.moments`][ocbf.reliability.moments] -- label-free moment estimators. The triplet method gives
-  per-source accuracy in *closed form* from pairwise agreement rates alone, which is both a
-  usable estimator and the initialiser that keeps the outer EM loop out of bad local optima
-  (design doc section 6.2). Its continuous sibling,
-  [`pairwise_channels`][ocbf.reliability.moments.pairwise_channels], reads a source's bias
-  and noise scale off pairwise disagreement in the same label-free way.
-* [`ocbf.reliability.params`][ocbf.reliability.params] -- the parameter types the belief
-  block consumes: two-sided binary quality, the one-parameter categorical spread model, and
-  the per-template continuous channel.
+The evidence workflow resolves fixed parameters through ``reliability.config`` and uses
+channel-specific values from ``reliability.channels``. Moment estimators are separate
+utilities for declared static-claim assumptions; inference never invokes them implicitly.
 """
 
 from ocbf.reliability.moments import (

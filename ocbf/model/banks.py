@@ -75,17 +75,9 @@ class UnaryBank:
 
 
 class PairwiseBank:
-    """Pairwise factors sharing a small set of log-potential tables.
+    """Batched pairwise factors sharing log-potential tables.
 
-    Edge layout is ``[all A-side edges, all B-side edges]``, so both message directions are
-    single batched ``logsumexp`` reductions rather than a Python loop over factors.
-
-    This bank carries the structural coupling that makes the model more than parallel
-    per-assertion voting: referential integrity ties a link to its endpoints' existence,
-    and the type gate ties a link to its event's latent type. Those edges are how belief
-    reaches assertions no source covered -- the mechanism Stage 1 section 4.2 says must
-    carry most of the work in a sparse regime.
-    """
+    Edges are stored as all A-side edges followed by all B-side edges. Messages operate on both directions in batches. Values follow the discrete graph convention, which is distinct from canonical support validation."""
 
     __slots__ = ("name", "_a", "_b", "_tables", "_tid", "_ka", "_kb")
 
@@ -140,26 +132,7 @@ class PairwiseBank:
 class CardinalityBank:
     """Soft counting factors over groups of binary variables.
 
-    Implements ``sum_o R[e,q,o] in [lo, hi]`` from design doc section 3.1. A naive factor
-    over ``k`` links is ``2^k``; the forward-backward recursion over the running count is
-    ``O(k * C)``, with ``C`` the capped count domain. For the overwhelmingly common
-    ``exactly-one`` qualifier ``C`` is 4, so this is effectively linear in ``k``.
-
-    **This is a hard requirement, not an optimisation.** Without it a dense E2O
-    neighbourhood is intractable, and the cardinality constraint -- one of the strongest
-    structural signals available when evidence is thin -- would have to be dropped.
-
-    Groups are ragged, so they are bucketed by ``(k, lo, hi)`` and each bucket is processed
-    fully batched. Vectorising where the data is regular, without pretending it always is.
-
-    Two deliberate approximations, both bounded and both stated:
-
-    * The count domain saturates at ``cap = hi + cap_slack``. Violations beyond the cap are
-      penalised as if they were *at* the cap, so gross over-linking is under-penalised. The
-      slack keeps the flat region far from the interesting range.
-    * The constraint is **soft** (design doc section 3.4). Multiplicity is a domain belief,
-      not a definitional rule, and real logs violate their own schemas.
-    """
+    The constraint counts active links in a group against supplied lower and upper bounds. Forward/backward count recursion costs ``O(k*C)`` rather than enumerating ``2**k`` assignments. The count domain saturates at the configured cap, so larger violations receive the cap penalty. Dense oracle conversion is bounded by ``MAX_DENSE_GROUP``. This numerical utility does not replace the canonical compiler's typed hard-support rules."""
 
     __slots__ = ("name", "_vars", "_weight", "_buckets", "_n_groups")
 

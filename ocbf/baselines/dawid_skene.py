@@ -1,14 +1,8 @@
-"""Dawid-Skene EM for binary assertions.
+"""Two-coin Dawid–Skene estimation for static binary claims.
 
-The 1979 reference model, and the intermediate baseline between weighted voting and the
-full engine. Two-sided quality (sensitivity and specificity separately) rather than a
-single coin, because Stage 1 section 5.1 is emphatic that a scalar accuracy cannot express
-systematic bias, and because under ``COMPLETE_OVER_SCOPE`` coverage the specificity is
-precisely what a source's silence means.
-
-Beta priors are not decoration here. In the sparse regime a source with three claims would
-otherwise get an accuracy of 0 or 1, and EM would then treat it as an oracle. The priors
-are the minimal form of the pooling that design doc section 5.3 does properly.
+Sensitivity and specificity distinguish false positives from false negatives. Optional
+symmetric fitting supplies the one-coin comparison. Priors and initialization break a
+label-orientation symmetry that unlabeled agreement alone cannot resolve.
 """
 
 from __future__ import annotations
@@ -37,14 +31,9 @@ def dawid_skene(
     init_sensitivity: float = 0.7,
     init_specificity: float = 0.7,
 ) -> BeliefState:
-    """Two-sided Dawid-Skene by EM.
+    """Estimate two-sided source quality by EM on static binary claims.
 
-    ``alpha_prior``/``beta_prior`` are ``(a, b)`` Beta hyper-parameters on sensitivity and
-    specificity. Their means sit above 0.5, which is the better-than-chance assumption that
-    breaks the "all sources are adversarial" mirror symmetry (Stage 1 section 10 item 1).
-    Without it EM is free to converge on the mirror solution and report every truth
-    inverted, with an identical likelihood.
-    """
+    ``alpha_prior`` and ``beta_prior`` are Beta hyperparameters on sensitivity and specificity. Their orientation assumptions break the label-inversion symmetry of unlabeled agreement. The result is conditional on this static-source model."""
     refs = [
         r
         for r in claim_set.refs

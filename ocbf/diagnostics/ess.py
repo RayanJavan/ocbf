@@ -1,24 +1,8 @@
-"""Effective sample size: how many *independent* votes an assertion really has.
+"""Source-evidence effective sample size under declared dependence assumptions.
 
-``k`` near-duplicate sources are not ``k`` votes. With weak sources, over-counting
-correlated evidence is the fastest route to confident error, and it is the dominant failure
-mode when sources are numerous (Stage 1 section 4.6). This module makes the over-count
-visible.
-
-The design-effect correction, per declared source family ``c``:
-
-```text
-ESS_c  = m_c / ( 1 + (m_c - 1) * rho_c )
-ESS(a) = sum over families of ESS_c
-```
-
-with ``rho_c`` the within-family residual correlation -- the agreement between cluster-mates
-*beyond* what their individual accuracies already explain. Under conditional independence
-two sources with +/-1 accuracies ``a_i``, ``a_j`` agree at rate ``a_i a_j``; anything above
-that is shared error, which is exactly what must not be counted twice.
-
-Reporting ``ESS(a)`` next to ``deg(a)`` is what turns "twenty sources agree" from a
-reassuring number into a checkable one.
+Cluster membership can diagnose redundancy among static claims. These calculations do not
+modify an observation likelihood and do not replace explicit copy grouping or shared
+latent factors. This ESS differs from autocorrelation ESS for Monte Carlo draws.
 """
 
 from __future__ import annotations
@@ -120,17 +104,9 @@ def effective_sample_sizes(
     default_accuracy: float = 0.6,
     default_rho: float = 0.3,
 ) -> ESSReport:
-    """Compute ESS per assertion from declared source families and estimated correlations.
+    """Compute per-assertion source-evidence ESS from declared clusters and estimated correlations.
 
-    ``clusters`` maps source id to its **declared** family. Declared rather than learned is
-    deliberate (design doc section 5.3): learning a dependency graph also needs overlap,
-    and in a thin claim graph there is not enough of it -- so provenance the operator
-    already knows beats an under-determined estimate.
-
-    ``default_rho`` applies to clusters with too little overlap to estimate. It is
-    deliberately non-zero: assuming independence within a declared family is the optimistic
-    error, and the optimistic error here is the one that produces confident wrongness.
-    """
+    ``clusters`` maps source identities to declared families. The resulting diagnostic neither corrects likelihood dependence nor measures Monte Carlo autocorrelation."""
     accuracy = accuracy or {}
     rho = _cluster_correlations(
         claim_set, clusters, accuracy, min_overlap=min_overlap, default_accuracy=default_accuracy

@@ -1,103 +1,88 @@
-# OCBF
+---
+hide:
+  - toc
+---
 
-**Object-Centric Belief Fusion** — a joint probabilistic belief over a latent
-[OCEL 2.0](https://www.ocel-standard.org/) event log, fused from many **sparse,
-individually unreliable, structurally-typed** sources.
+# Reason about uncertain process histories
 
-```text
-sources (sparse, weak, numerous)        OCEL 2.0 schema (clamped)
-              │                                   │
-              ▼                                   ▼
-         ClaimSet ────────▶ par-factor graph ◀──── candidate universe
-                                   │
-        loopy BP  +  Gaussian EP  ◀─┴─▶  hierarchical reliability GLM
-        (discrete)   (continuous)
-                                   │
-                                   ▼
-                BeliefState:  marginals · decidability flags · attribution
-                       +  identifiability / effective-sample-size diagnostics
-```
+OCBF combines interpreted reports under an explicit probability model, then answers
+questions about the resulting object-centric histories. You supply the semantic context,
+candidate support, source meaning, and manual trust.
 
-## What it is for
+Take the [workflow tour](overview/workflow.md) to see the inputs, handoffs, and results.
 
-You have the *structural skeleton* of a world — an OCEL 2.0 type system, candidate events
-and objects, legal qualifier signatures — and many probabilistic sources, each with a known
-signal skeleton. The sources are **highly sparse, individually unreliable, and numerous**.
-OCBF turns their claims into a calibrated joint belief over the whole log.
+[Run your first assessment](getting-started/quickstart.md){ .md-button .md-button--primary }
+[Explore capabilities](reference/capabilities.md){ .md-button }
 
-```python
-from ocbf.pipeline import fuse
+## What OCBF is, in plain terms
 
-result = fuse(universe, sources)
-ref = AssertionRef.e2o("ev_00022", "order", "order_16")
+OCBF takes possibly-conflicting reports about what happened in a process, weighs how much
+to trust each source, and answers questions about what most likely happened — while keeping
+the uncertainty explicit instead of guessing a single history.
 
-result.belief.prob_true(ref)           # 0.041   — a calibrated posterior
-result.belief.verdict(ref)             # FALSE   — or UNDETERMINED, if nothing could decide it
-result.belief.top_contributors(ref, 2) # [('channel:src_00097', -3.794), ('prior', -3.178)]
-result.overlap.explain()               # whether the reliabilities were estimable at all
-```
+It is for people integrating process or event data who need calibrated, auditable answers
+rather than one silently-chosen story. Familiarity with event and process data and basic
+probability is enough to follow along. Unfamiliar with a term? The
+[glossary](reference/glossary.md) defines the vocabulary used throughout.
 
-Those last two lines are the point as much as the first. With sources this weak, a
-probability without its provenance and its preconditions is a number, not an answer — so
-attribution and diagnostics come back from every run rather than on request.
-
-Why the sparse, unreliable, numerous regime forces that: [The
-regime](explanation/the-regime.md).
-
-## Results
-
-Synthetic order-to-cash process: 60 orders, 600 sources at mean accuracy ≈ 0.62, median 2
-sources per assertion. Ground truth known; all methods scored on identical assertions.
-
-| method | accuracy | AUC | Brier | ECE |
-| --- | --- | --- | --- | --- |
-| majority vote | 0.7716 | 0.8868 | 0.1521 | 0.1513 |
-| **weighted vote** *(the bar)* | 0.8100 | 0.9140 | 0.1333 | 0.1158 |
-| Dawid–Skene | 0.6512 | 0.8592 | 0.1909 | 0.1857 |
-| **OCBF** | **0.9322** | **0.9824** | **0.0488** | **0.0334** |
-
-!!! note "Why weighted vote is the bar"
-
-    Weighted vote beating Dawid–Skene here reproduces a known and sobering finding from the
-    truth-discovery literature inside our own harness. A fusion system that does not clear
-    weighted voting is not working, so OCBF runs and reports it on every benchmark.
-
-## Where to go next
+You call it from your own code; it is not a data pipeline, user interface, or scheduler.
+Those responsibilities stay in [your application](overview/workflow.md).
 
 <div class="grid cards" markdown>
 
--   :material-rocket-launch: **[Getting started](getting-started/index.md)**
+- **Start with a working example**
 
-    Install it and fuse a synthetic log end to end.
+    Install the library and follow a complete synthetic evidence-to-query calculation.
 
--   :material-wrench: **[How-to guides](how-to/index.md)**
+    [Getting started →](getting-started/index.md)
 
-    Add your own sources, read a belief state, interpret the diagnostics.
+- **Apply it to your question**
 
--   :material-book-open-variant: **[Explanation](explanation/index.md)**
+    Interpret reports, configure trust, choose inference, and inspect qualified results.
 
-    Why the regime forces this design, and the full research and design record.
+    [How-to guides →](how-to/index.md)
 
--   :material-api: **[API reference](reference/ocbf/index.md)**
+- **Understand the model**
 
-    Generated from the source, module by module.
+    See how fixed semantics, evidence revisions, joint uncertainty, and computation fit together.
+
+    [Concepts →](concepts/index.md)
+
+- **Build on the contracts**
+
+    Inspect the current architecture and add interpreters, channels, engines, or evaluators.
+
+    [Development →](development/index.md)
 
 </div>
 
-## What it covers
+## One model, explicit handoffs
 
-The **discrete backbone** holds belief over existence, event type, and E2O and O2O links,
-under hard referential integrity and type gating, soft cardinality, and source channels with
-two-sided quality and silence handling.
+<div class="diagram-scroll" markdown tabindex="0" role="region" aria-label="Evidence to query workflow; scroll horizontally to read all nodes">
 
-The **continuous layer** holds belief over timestamps and ordered attributes, through a latent
-Gaussian copula coupled back to the backbone. It is additive: a world that declares nothing
-continuous answers exactly as a discrete-only run would.
+```mermaid
+flowchart LR
+    C["Semantic context"] --> M["Canonical model"]
+    R["Versioned reports"] --> E["Interpreted evidence"]
+    E --> M
+    T["Resolved trust"] --> M
+    M --> I["Inference"]
+    I --> B["Qualified posterior"]
+    B --> Q["Process queries"]
+    N["Normative reference"] --> Q
+```
 
-Every run returns the diagnostics that say when not to trust it — identifiability, per-assertion
-decidability, and effective sample size — and every posterior carries the attribution that
-produced it.
+</div>
 
-OCBF does not read or write OCEL 2.0 files, sample whole logs, or resolve entity identity.
-[Limitations](about/limitations.md) states the full boundary, including the approximations
-inside what it does cover.
+OCBF is an in-process library. Database access, ingestion, credentials, scheduling, and
+screens belong to the calling application. Its [integration boundary](integrations/index.md)
+keeps producer-specific fields out of generic process queries.
+
+## Understand the answer you receive
+
+Results retain their scope, denominators, scientific identities, evidence qualifications,
+and numerical assessment. A probability is conditional on the supplied model and evidence.
+An unavailable quantity remains explicit.
+
+See [capabilities and limitations](reference/capabilities.md) and
+[result meanings](reference/results.md) before using an estimate in a decision.

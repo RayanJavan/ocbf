@@ -1,27 +1,4 @@
-"""What is in the Gaussian block, and how its coordinates are correlated.
-
-Design doc section 4.1 leaves two things to be decided per deployment: which marginal
-transform each quantity uses, and where the latent precision matrix ``Theta`` is allowed to
-be non-zero. [`CopulaSpec`][ocbf.model.copula.structure.CopulaSpec] carries both.
-
-**Marginals are templated, not per-instance.** One transform serves every event's timestamp,
-one serves every instance of an attribute. This is the par-factor principle of design doc
-section 2.1 applied to the continuous layer: all groundings of a template share parameters,
-so a marginal is estimated from every instance of its attribute rather than from the handful
-of claims about any single one. In a regime where the median assertion has one witness,
-per-instance marginals would not be estimable at all.
-
-**Structure is schema-given.** The non-zero pattern of ``Theta`` comes from the schema, not
-from a structure-learning pass:
-
-* an event attribute and that event's timestamp;
-* two attributes of the same event;
-* two attributes of the same object.
-
-Section 4.1 names exactly these as the known cases. Learning the rest needs co-observation
-this regime does not supply, so the honest default for an undeclared pair is independence --
-a zero in ``Theta``, which is a statement, not a gap.
-"""
+"""Standalone copula structure and caller-controlled fitting. Template keys identify shared marginal transforms; supplied paired observations determine admitted correlations. These utilities neither construct canonical evidence likelihoods nor fit parameters during inference."""
 
 from __future__ import annotations
 
@@ -36,11 +13,7 @@ from ocbf.model.copula.marginals import GaussianMarginal, MarginalTransform, fit
 from ocbf.schema import AttributeKind, Schema
 
 EVENT_TIME_KEY = "event_time"
-"""Template key shared by every event timestamp.
-
-Timestamps live in the copula (design doc section 4.1), and every event's time is a draw
-from the same process-wide marginal -- which is what makes that marginal estimable at all.
-"""
+"""Shared template key for caller-supplied timestamp marginal transforms."""
 
 
 def marginal_key(ref: AssertionRef) -> str:
@@ -158,25 +131,9 @@ def fit_copula(
     kinds: Mapping[str, AttributeKind] | None = None,
     seed: int = 0,
 ) -> CopulaSpec:
-    """Fit marginals from pooled observations, and correlations from co-observed pairs.
+    """Fit standalone marginal transforms and latent correlations from supplied observations.
 
-    ``observations`` maps a template key to every value ever reported for it. The values are
-    *claims*, not truth -- the truth is latent -- so the fitted marginal is the marginal of
-    the reported values. That is an approximation, and a benign one: source noise is
-    modelled as centred, so it inflates the marginal's spread without shifting its shape,
-    and a slightly over-dispersed marginal makes the layer more conservative rather than
-    less.
-
-    ``pairs`` supplies co-observed value vectors for template pairs whose correlation should
-    be estimated; the schema-given structure of design doc section 4.1 is what decides which
-    pairs are offered. Kendall's tau is computed on each and inverted through the bridge.
-
-    The event-time template is fitted with a
-    [`GaussianMarginal`][ocbf.model.copula.marginals.GaussianMarginal] rather than an
-    empirical one. Affinity is load-bearing there and not merely convenient: it makes the
-    latent and observed accounts of a time *difference* agree exactly, which is what the
-    lifecycle precedence factor of design doc section 3.3 is stated in.
-    """
+    ``observations`` pools values by template; co-observed pairs inform correlations. Timestamp coordinates use the explicitly supplied Gaussian time assumptions. Fitting is caller-controlled and does not run inside canonical inference."""
     marginals: dict[str, MarginalTransform] = {}
     for key, values in observations.items():
         if key == EVENT_TIME_KEY:

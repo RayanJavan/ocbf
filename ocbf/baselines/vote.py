@@ -62,18 +62,9 @@ def weighted_vote(
     prior_logit: float = 0.0,
     sources: Mapping[str, Source] | None = None,
 ) -> BeliefState:
-    """Log-odds vote with per-source weights.
+    """Combine binary static claims by weighted log odds.
 
-    Weights come from, in order of preference: an explicit ``weights`` map; a
-    [`TripletEstimate`][ocbf.reliability.TripletEstimate]; or a fresh triplet estimate computed here.
-    The triplet route is label-free, which is the point -- a "weighted vote baseline" that
-    needed gold labels would not be a baseline for an unsupervised problem.
-
-    Silence is honoured. When ``sources`` is supplied, a source declaring
-    ``COMPLETE_OVER_SCOPE`` contributes a negative vote on every in-scope assertion it did
-    not claim. Ignoring that would discard the false-negative signal that is the whole
-    point of a detector-style source (Stage 1 section 4.5).
-    """
+    Weights use an explicit map, supplied triplet estimates, or equal values in that order. A declared detector-style source can contribute silence within supplied scope; this utility does not verify observation opportunities or create a coverage model."""
     if weights is None:
         estimate = estimate or triplet_accuracies(claim_set)
         weights = {s: estimate.weight(s) for s in claim_set.source_ids}

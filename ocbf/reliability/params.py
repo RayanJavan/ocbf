@@ -1,12 +1,9 @@
-"""Per-source channel parameters, and the table that supplies them.
+"""Parameter values for static source diagnostics and numerical utilities.
 
-This is the object the parameter block fits and the belief block consumes -- the interface
-between the two halves of the alternating scheme in design doc section 6.1.
-
-Note what is *not* here: a ``K x K`` confusion matrix per source. Design doc section 5.1
-rejects that outright, because it is precisely the parameterisation the sparse regime
-cannot afford. ``rho`` is the one-parameter spread model, with the off-diagonal confusion
-profile shared across a source cluster.
+Binary sensitivity/specificity, categorical hit rates and continuous error parameters are
+explicit mathematical assumptions. ``ChannelValues.from_source_params`` converts binary
+and categorical values for the canonical evidence workflow; it does not fit or calibrate
+those values from physical evidence.
 """
 
 from __future__ import annotations
@@ -36,20 +33,10 @@ class SourceParams:
     """Categorical hit rate: ``P(reported type = true type)``."""
 
     temperature: float = 1.0
-    """Calibration temperature ``lambda_s`` for distributional claims.
-
-    Below 1 the source is overconfident and its likelihood is flattened; above 1 it is
-    underconfident and sharpened. Cheapest high-value parameter in the model, because
-    Stage 1 section 3.2 finds calibration -- not accuracy -- is where fusion pays.
-    """
+    """Explicit multiplier for a supplied distributional log likelihood. Choosing a temperature does not establish empirical calibration."""
 
     noise_df: float = 3.0
-    """Degrees of freedom ``nu_s`` of the Student-t continuous channel.
-
-    Student-t rather than Gaussian, per design doc section 5.1: unreliable sources produce
-    gross outliers, and a Gaussian channel is obliged to believe them. Low single digits
-    keep the tail heavy; large values approach the Gaussian channel.
-    """
+    """Student-t degrees of freedom for synthetic or caller-supplied continuous noise assumptions."""
 
     def __post_init__(self) -> None:
         for name in ("sensitivity", "specificity", "rho"):
@@ -174,17 +161,7 @@ class ContinuousChannel:
 
 
 class ContinuousChannelTable:
-    """Continuous channel parameters indexed by ``(template, source)``.
-
-    Indexed by both, not by source alone, because design doc section 5.3 indexes reliability
-    by ``(source, assertion family, type)`` -- the worker-task specialisation -- and for the
-    continuous channel that indexing is not merely more expressive but *necessary*: bias and
-    scale carry the template's units, so a single per-source number would be a unit error
-    wearing a parameter's clothes.
-
-    Each template carries its own pooled default, which is what a source with no co-claims on
-    that template receives. In this regime that is most of them.
-    """
+    """Continuous error parameters indexed by template and source. This allows one source to have different bias/noise assumptions across assertion templates."""
 
     __slots__ = ("_channels", "_defaults", "_fallback")
 

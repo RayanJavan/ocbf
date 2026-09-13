@@ -1,19 +1,8 @@
-"""The fixed candidate universe, and the grounding pass that builds it.
+"""Bounded candidate instances and schema-aware relation enumeration.
 
-Naive E2O grounding is ``|E| x |Q| x |O|`` -- 1e12 and hopeless at the scale of design doc
-section 1.3. Three prunes, applied in order, bring it to the 1e5-1e7 range:
-
-1. **Qualifier signature.** Because ``T_e`` is latent, a link survives if *some* event type
-   still in the event's support makes the ``(event type, qualifier, object type)``
-   signature legal. Typically cuts two to four orders of magnitude.
-2. **Temporal windowing.** An object has a lifespan; links to events whose time bracket
-   cannot overlap it are dropped.
-3. **Claim-anchored blocking** ([`Universe.active_refs`][ocbf.universe.core.Universe.active_refs]). A candidate with no claim
-   and no structural path to a claimed variable within ``k`` hops contributes only its
-   prior, so it is never materialised into the graph.
-
-The third is the one that makes the sparse regime work *for* us: sparse claims mean the
-active graph is far smaller than the candidate universe.
+Object identities/types are supplied. Event existence and compatible event types can remain
+uncertain. Signature and time-bracket pruning limit candidate relations; their consequences
+are reported explicitly. The universe enumerates support rather than interpreting reports.
 """
 
 from __future__ import annotations
@@ -37,16 +26,7 @@ O2OKey = tuple[str, str, str]
 
 @dataclass(frozen=True, slots=True)
 class EventCandidate:
-    """A potential occurrence: a *slot*, not a typed event.
-
-    ``type_support`` is the set of event types this slot could be. Modelling one
-    categorical ``T_e`` over the support is ``K`` times cheaper than ``K`` mutually
-    exclusive binary candidates and gives belief propagation a far better-conditioned
-    graph (design doc section 1.1).
-
-    ``time_lo``/``time_hi`` bracket the timestamp. They drive the temporal prune only; the
-    actual ``tau_e`` posterior is inferred in the continuous layer.
-    """
+    """Candidate event occurrence with supplied type support and optional time bracket. Its existence, selected type and qualified relations remain model variables."""
 
     id: str
     type_support: frozenset[str]
@@ -67,12 +47,7 @@ class EventCandidate:
 
 @dataclass(frozen=True, slots=True)
 class ObjectRecord:
-    """A registry entry. Type is clamped; existence is latent.
-
-    The asymmetry with [`EventCandidate`][ocbf.universe.core.EventCandidate] is deliberate and argued in design doc
-    section 1.2: identity being clamped hands us a registry, and an OCEL 2.0 registry entry
-    cannot name its own attributes without its type.
-    """
+    """Object candidate with supplied identity and type. Existence remains a separate assertion; missing physical identity cannot be resolved by this record type."""
 
     id: str
     object_type: str
@@ -102,27 +77,10 @@ class PruneReport:
     """Attribute variables that entered the continuous layer."""
 
     attr_ambiguous: int = 0
-    """Event attributes dropped because the event's type support disagrees about them.
-
-    An attribute is in-domain for some event types and not for others, and ``T_e`` is
-    latent, so whether the attribute *applies* is itself uncertain. Design doc section 2.2
-    resolves that with an explicit ``NA`` state, which is available to a discrete attribute
-    variable and not to a Gaussian coordinate -- a latent Gaussian has no "does not apply"
-    value, and there is no well-posed way to weigh a density against the probability of
-    absence.
-
-    So the conservative reading is taken, exactly as the cardinality factor does where types
-    disagree: the attribute is registered only where *every* type in the support declares
-    it, and is otherwise prior-only and counted here. That confines the relaxation to
-    assertions the belief state makes no claim about anyway.
-    """
+    """Count of event attributes omitted from the candidate numerical registry because not every candidate event type declares them. This records the registry's limitation; it does not infer a probability for those values."""
 
     attr_categorical: int = 0
-    """Attributes left in the discrete layer because they are unordered categoricals.
-
-    Design doc section 4.2's honest boundary, counted rather than assumed: a categorical
-    attribute has no monotone image in a Gaussian, so the copula does not cover it.
-    """
+    """Count of unordered categorical attributes excluded from the numerical copula representation."""
 
     @property
     def e2o_reduction(self) -> float:
@@ -231,11 +189,7 @@ class Universe:
         return [self._e2o[i] for i in self._e2o_by_object.get(obj, ())]
 
     def e2o_group(self, event: str, qualifier: str) -> list[E2OKey]:
-        """All candidate links for one ``(event, qualifier)`` pair.
-
-        This is the scope of a cardinality counting factor (design doc section 3.1), and
-        the block resampled jointly by blocked Gibbs (section 6.4).
-        """
+        """Return candidate links for one event and qualifier. This numerical grouping alone does not enforce the canonical compiler's target-type-specific multiplicities."""
         return [k for k in self.e2o_of_event(event) if k[1] == qualifier]
 
     def qualifiers_of_event(self, event: str) -> frozenset[str]:
@@ -247,16 +201,9 @@ class Universe:
     def active_refs(
         self, claimed: Iterable[AssertionRef], hops: int = 1
     ) -> frozenset[AssertionRef]:
-        """Refs within ``hops`` structural steps of a claimed ref.
+        """Select assertion references within a bounded number of entity-co-occurrence steps of claimed references.
 
-        Adjacency is *entity co-occurrence*: two refs are neighbours when they touch a
-        common event or object id. That is the relation along which the hard schema
-        factors and the structural prior connect variables, so it is the right notion of
-        "the prior can move this belief from that evidence".
-
-        Anything outside the returned set is answered with the structural prior. This is
-        the graceful-degradation guarantee of design doc section 10, made operational.
-        """
+        This utility selects an execution region. It does not preserve a full posterior boundary factor automatically; canonical inference must retain all dependencies needed by its target."""
         if hops < 0:
             raise ValueError("hops must be non-negative")
 
@@ -488,11 +435,7 @@ class UniverseBuilder:
     def _register_object_attributes(
         self, reg: VariableRegistry, obj: ObjectRecord, report: PruneReport
     ) -> None:
-        """Register an object's copula-eligible attributes.
-
-        No ambiguity arises here: object type is clamped (design doc section 1.2), so what an
-        object's attributes *are* is known even though their values are not.
-        """
+        """Register ordered object attributes admitted by the supplied object type and candidate values."""
         for spec in self.schema.object_types[obj.object_type].attributes:
             if not spec.kind.in_copula:
                 report.attr_categorical += 1

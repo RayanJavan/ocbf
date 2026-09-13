@@ -1,11 +1,4 @@
-"""Verify the BP engine against brute-force enumeration.
-
-The engine is an approximation on loopy graphs, so it needs an oracle it can be checked
-against on graphs small enough to enumerate. This is design doc section 6.3's tier-1
-argument in test form: a system whose core is approximate needs exact ground truth to
-measure the approximation, and the cardinality forward-backward recursion in particular is
-subtle enough that "it looked plausible" is not evidence.
-"""
+"""Independent numerical checks against enumeration, analytical moments and declared synthetic reference cases."""
 
 from __future__ import annotations
 

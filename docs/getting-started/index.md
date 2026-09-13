@@ -1,13 +1,14 @@
 # Getting started
 
-Two pages, in order:
+Start with a finite synthetic assessment that runs on the core dependencies. It includes
+the schema, candidate universe, reports, interpreter, manual trust, and process queries.
 
-1. **[Installation](installation.md)** — set up the environment and verify it.
-2. **[Quickstart](quickstart.md)** — generate a synthetic world, fuse it, and read the
-   result. About ten minutes, no prior OCEL knowledge assumed.
+1. [Install OCBF](installation.md).
+2. [Run and understand the assessment](quickstart.md).
+3. Read [Concepts](../concepts/index.md) to understand the inputs and results.
+4. Follow a [task guide](../how-to/index.md) to replace the example's inputs.
 
-The quickstart is a *tutorial*: it is designed to be followed exactly, and every step is
-guaranteed to work. If you already know what you want to accomplish, the
-[how-to guides](../how-to/index.md) are the faster route. If you want to know *why* the
-model is shaped this way before running anything, start with
-[Explanation](../explanation/index.md).
+Keep the [glossary](../reference/glossary.md) open for unfamiliar terms.
+
+The examples are checkout modules, separate from the installed `ocbf` package. Run their
+commands from the repository root with your environment activated.

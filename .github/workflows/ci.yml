@@ -36,10 +36,8 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
-      # bayes is not optional for the suite despite the name: the hierarchical reliability
-      # fit imports PyMC lazily, and test_pipeline.py exercises that path.
       - name: Install
-        run: python -m pip install --upgrade pip && python -m pip install -e ".[bayes,dev]"
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
 
       # GTSAM is not installed here. tests/test_gtsam_oracle.py skips its oracle checks
       # when the backend is absent and still runs the plumbing tests, which is the point.
@@ -59,21 +57,24 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
-      # The package itself is installed, not just the docs extras: mkdocstrings imports
-      # ocbf to read its signatures, and scripts/gen_ref_pages.py walks the same tree.
+      # Install the library and source-inspection documentation toolchain together.
       - name: Install
         run: python -m pip install --upgrade pip && python -m pip install -e ".[docs]"
 
-      # --strict promotes the documentation-integrity warnings into failures; see
-      # docs/explanation/design-record.md for what it catches and why.
+      - name: Check documentation sources and examples
+        run: python scripts/check_docs.py
+
+      # Strict mode promotes broken navigation, links and reference warnings to failures.
       - name: Build site
         run: mkdocs build --strict
         # Suppresses a long unsolicited advisory the mkdocs-material build prints.
         env:
           DISABLE_MKDOCS_2_WARNING: "true"
 
-      # Pages is unavailable for private repositories on the Free plan, so this is how the
-      # site gets read: download the artifact from the run summary and open index.html.
+      - name: Check published content
+        run: python scripts/check_docs.py --site-dir site
+
+      # Deliver the generated site through the existing CI artifact.
       - name: Upload site
         uses: actions/upload-artifact@v7
         with:

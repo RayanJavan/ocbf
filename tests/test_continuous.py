@@ -1,14 +1,4 @@
-"""The continuous layer: copula transforms, Gaussian EP, and the CG coupling.
-
-Structured the same way as `test_exactness.py`, and for the same reason. Expectation
-propagation is an approximation, so the tests that matter are the ones that put it beside
-something exact -- a closed-form posterior, a numerical integral, a brute-force mixture --
-and measure the gap. A test that only checks the engine agrees with itself would pass on a
-subtly wrong tilted moment, which is precisely the class of error this layer is exposed to.
-
-Where no oracle exists, the standard is the one design doc section 8.3 sets for the discrete
-side: beat the baseline, and be calibrated while doing it.
-"""
+"""Independent numerical checks against enumeration, analytical moments and declared synthetic reference cases."""
 
 from __future__ import annotations
 
@@ -17,17 +7,10 @@ import pytest
 from scipy import integrate
 
 from ocbf.assertions import AssertionRef, Family, VariableRegistry
-from ocbf.baselines import claim_median, weighted_mean
 from ocbf.belief import BeliefStateBuilder
-from ocbf.eval import compare_continuous, evaluate_continuous, gaussian_crps, pit_values
-from ocbf.inference import BPConfig, EPConfig, run_ep
+from ocbf.eval import gaussian_crps
+from ocbf.inference import EPConfig, run_ep
 from ocbf.inference.gabp_ep import cavities, fill_belief_state
-from ocbf.model.continuous import (
-    ContinuousSpec,
-    build_continuous_graph,
-    continuous_refs,
-    fit_copula_from_claims,
-)
 from ocbf.model.copula import (
     CopulaSpec,
     EmpiricalMarginal,
@@ -39,7 +22,6 @@ from ocbf.model.copula import (
     coupling_precision,
     fit_marginal,
     kendall_tau,
-    marginal_key,
     truncated_normal_moments,
 )
 from ocbf.model.gaussian import (
@@ -58,11 +40,7 @@ from ocbf.model.gaussian_banks import (
     gaussian_loglik,
     student_t_loglik,
 )
-from ocbf.pipeline import FusionConfig, fuse
-from ocbf.reliability import ReliabilityTable, pairwise_channels
-from ocbf.schema import AttributeKind, AttributeSpec, ConstraintClass, Strength
-from ocbf.sources import ClaimSet
-from ocbf.synth import ProcessConfig, SourceRegime, simulate_process, simulate_sources
+from ocbf.schema import AttributeKind, AttributeSpec
 
 CONTINUOUS_FAMILIES = (
     Family.E2O,
@@ -144,7 +122,7 @@ def test_truncated_marginal_separates_the_floor_from_the_tail():
 def test_categorical_is_refused_by_name():
     """The copula's boundary must fail loudly, not silently mis-model an unordered type."""
     spec = AttributeSpec("channel", AttributeKind.CATEGORICAL, ("web", "shop"))
-    with pytest.raises(ValueError, match="discrete layer"):
+    with pytest.raises(ValueError, match="no monotone transform"):
         fit_marginal([0.0, 1.0], spec=spec)
 
 
@@ -234,7 +212,7 @@ def test_the_gaussian_block_refuses_a_discrete_variable():
         GaussianGraph(reg, [0], [])
 
 
-# -- the four expectation-propagation cases of design doc section 4.3 --------------------
+# -- expectation-propagation reference cases --------------------
 
 
 def test_copula_warp_site_matches_numerical_integration():
@@ -343,7 +321,7 @@ def test_cg_collapse_matches_the_exact_mixture_moments():
 
 
 def test_the_retained_mixture_is_available_beside_its_collapse():
-    """Design doc section 4.3 keeps the uncollapsed path so the collapse can be checked."""
+    """The retained mixture is available beside its collapse."""
     reg = continuous_registry(1)
     bank = CGMeanBank([0], np.array([[-1.0, 2.0]]), np.array([[0.5, 0.5]]), 0.25)
     graph = GaussianGraph(reg, [0], [bank])
@@ -478,259 +456,35 @@ def test_crps_of_a_perfect_forecast_beats_a_vague_one():
 # -- grounding --------------------------------------------------------------------------
 
 
-def test_a_universe_without_attributes_grounds_no_attribute_variables():
-    """The layer must be additive: declaring nothing continuous must cost nothing."""
-    truth = simulate_process(ProcessConfig(n_orders=3, seed=0))
-    universe = truth.build_universe()
-    refs = continuous_refs(universe)
-    assert refs, "timestamps are always registered"
-    assert all(r.family is Family.EVENT_TIME for r in refs)
 
 
-def test_event_attributes_need_every_type_in_the_support_to_declare_them():
-    """OCEL 2.0 makes attribute sets disjoint per type, so a wide support is always ambiguous."""
-    truth = simulate_process(
-        ProcessConfig(n_orders=3, attributes=True, p_type_known=0.5, seed=0)
-    )
-    universe = truth.build_universe()
-    report = universe.prune_report
-
-    assert report.attr_registered > 0
-    assert report.attr_ambiguous > 0
-    for ref in continuous_refs(universe):
-        if ref.family is Family.EVENT_ATTR:
-            support = universe.events[ref.subject].type_support
-            declaring = universe.schema.event_types_declaring(ref.attribute)
-            assert support <= declaring
 
 
-def test_the_copula_recovers_the_planted_object_attribute_correlation():
-    """The generator plants a known latent correlation; the fit must find it."""
-    config = ProcessConfig(
-        n_orders=60, attributes=True, attribute_correlation=0.6, seed=11
-    )
-    truth = simulate_process(config)
-    universe = truth.build_universe()
-    sources = simulate_sources(
-        universe,
-        truth,
-        SourceRegime(n_sources=400, n_hotspots=40, deg_s_min=30, seed=11,
-                     families=(Family.OBJECT_ATTR,)),
-    )
-    claims = ClaimSet.from_sources(sources.sources)
-    copula = fit_copula_from_claims(universe, claims, seed=11)
-
-    recovered = copula.correlation("order_value", "order_units")
-    assert recovered > 0.2, "the planted correlation must survive noise and discretisation"
-    assert recovered < 1.0
 
 
 # -- end to end ---------------------------------------------------------------------------
 
 
-@pytest.fixture(scope="module")
-def continuous_run():
-    """A world where the link layer is informed, so every continuous factor can ground."""
-    truth = simulate_process(
-        ProcessConfig(n_orders=8, attributes=True, p_type_known=0.5, seed=5)
-    )
-    universe = truth.build_universe()
-    sources = simulate_sources(
-        universe,
-        truth,
-        SourceRegime(
-            n_sources=600, n_hotspots=60, deg_s_min=40, seed=5, families=CONTINUOUS_FAMILIES
-        ),
-    )
-    claims = ClaimSet.from_sources(sources.sources)
-    result = fuse(
-        universe,
-        sources.sources,
-        FusionConfig(outer_iterations=2, bp=BPConfig(max_iter=100), seed=5),
-    )
-    return truth, universe, claims, result
 
 
-def test_every_copula_kind_is_exercised(continuous_run):
-    _truth, _universe, _claims, result = continuous_run
-    kinds = set(result.continuous.summary()["kinds"])
-    assert kinds == {"continuous", "count", "ordinal", "truncated"}
 
 
-def test_all_six_continuous_templates_ground(continuous_run):
-    _truth, _universe, _claims, result = continuous_run
-    banks = result.continuous.summary()["banks"]
-    assert set(banks) >= {
-        "time_bracket",
-        "continuous_channel",
-        "copula_correlation",
-        "cg_time",
-        "precedence",
-    }
-    assert all(count > 0 for count in banks.values())
 
 
-def test_the_continuous_layer_is_better_calibrated_than_its_baselines(continuous_run):
-    """Design doc section 8.3's bar, applied to the continuous half.
-
-    Calibration is the criterion rather than point error, per Stage 1 section 3.2: an
-    aggregator that reports a median with a standard error is often close on the point and
-    badly overconfident about it, which is exactly the failure fusion is supposed to fix.
-    """
-    truth, universe, claims, result = continuous_run
-    block = frozenset(continuous_refs(universe))
-    scored = [r for r in claims.refs if r in block]
-    channels = pairwise_channels(
-        claims, lambda ref: marginal_key(ref) if ref in block else None
-    )
-    copula = result.continuous.copula
-
-    table = compare_continuous(
-        {
-            "claim_median": claim_median(universe.registry, claims, copula, channels=channels),
-            "weighted_mean": weighted_mean(universe.registry, claims, copula, channels=channels),
-            "ocbf": result.belief,
-        },
-        truth.truth_map(scored),
-        scored,
-    )
-    assert table["ocbf"]["crps"] < table["claim_median"]["crps"]
-    assert table["ocbf"]["crps"] < table["weighted_mean"]["crps"]
-    assert abs(table["ocbf"]["coverage_error"]) < abs(table["claim_median"]["coverage_error"])
-    assert abs(table["ocbf"]["coverage_error"]) < abs(table["weighted_mean"]["coverage_error"])
 
 
-@pytest.fixture(scope="module")
-def sparse_continuous_run():
-    """A pool thin enough to leave real timestamps unspoken for.
-
-    A separate fixture rather than a knob on the dense one, because the two regimes exercise
-    opposite halves of the layer: dense coverage is what lets precedence and the coupling
-    ground at all, and thin coverage is what leaves assertions for the structural prior to
-    carry. One configuration cannot show both.
-    """
-    truth = simulate_process(
-        ProcessConfig(n_orders=8, attributes=True, p_type_known=0.5, seed=5)
-    )
-    universe = truth.build_universe()
-    sources = simulate_sources(
-        universe,
-        truth,
-        SourceRegime(n_sources=120, n_hotspots=6, seed=5, families=CONTINUOUS_FAMILIES),
-    )
-    claims = ClaimSet.from_sources(sources.sources)
-    result = fuse(
-        universe,
-        sources.sources,
-        FusionConfig(outer_iterations=1, bp=BPConfig(max_iter=100), seed=5),
-    )
-    return truth, universe, claims, result
 
 
-def test_timestamps_no_source_mentioned_still_get_a_calibrated_posterior(
-    sparse_continuous_run,
-):
-    """The structural prior on the continuous side, which is the point of the whole layer.
-
-    No claim, so no aggregation rule has anything to say about these at all. The bracket, the
-    type-conditioned mean and the precedence orderings do, and the resulting intervals still
-    have to cover.
-    """
-    truth, universe, claims, result = sparse_continuous_run
-    silent = [
-        ref
-        for ref in continuous_refs(universe)
-        if ref.family is Family.EVENT_TIME
-        and not claims.for_ref(ref)
-        and truth.truth(ref) is not None
-    ]
-    assert len(silent) > 10, "the thin pool must leave real timestamps unclaimed"
-
-    report = evaluate_continuous(result.belief, truth.truth_map(silent), silent)
-    assert report.n == len(silent)
-    assert report.coverage > 0.6
 
 
-def test_the_posterior_is_probability_calibrated(continuous_run):
-    """Probability-integral transforms are uniform exactly when the posterior is honest."""
-    truth, universe, claims, result = continuous_run
-    block = frozenset(continuous_refs(universe))
-    scored = [r for r in claims.refs if r in block]
-    values = pit_values(result.belief, truth.truth_map(scored), scored)
-
-    assert values.size > 30
-    assert 0.35 < float(values.mean()) < 0.65
-    # Mass piled at both ends is the signature of intervals that are too narrow.
-    extreme = float(np.mean((values < 0.05) | (values > 0.95)))
-    assert extreme < 0.30
 
 
-def test_the_continuous_layer_leaves_a_discrete_only_world_untouched():
-    """The layer is additive, and this is the guarantee the default depends on."""
-    truth = simulate_process(ProcessConfig(n_orders=5, seed=2))
-    universe = truth.build_universe()
-    sources = simulate_sources(
-        universe, truth, SourceRegime(n_sources=120, n_hotspots=10, seed=2)
-    ).sources
-
-    config = FusionConfig(outer_iterations=1, bp=BPConfig(max_iter=60), fit_reliability=False)
-    with_layer = fuse(universe, sources, config)
-    config.continuous = None
-    without_layer = fuse(universe, sources, config)
-
-    refs = [r for r in with_layer.claim_set.refs if r.family is Family.E2O]
-    assert np.allclose(
-        with_layer.belief.binary_scores(refs), without_layer.belief.binary_scores(refs)
-    )
 
 
-def test_the_hybrid_loop_feeds_the_continuous_message_back_to_the_discrete_graph(
-    continuous_run,
-):
-    """The exact half of the coupling has to actually reach the discrete backbone."""
-    _truth, universe, _claims, result = continuous_run
-    grounding = result.continuous
-    assert grounding.cg_targets, "some event must have both a latent type and a timestamp"
-
-    for position, target in grounding.cg_targets.items():
-        assert universe.registry.ref(target).family is Family.EVENT_TYPE
-        assert grounding.graph.registry.ref(
-            int(grounding.graph.var_ids[position])
-        ).family is Family.EVENT_TIME
 
 
-def test_precedence_can_be_promoted_to_a_hard_constraint(continuous_run):
-    """The constraint register governs this factor exactly as it governs the discrete ones."""
-    _truth, universe, claims, result = continuous_run
-    from ocbf.schema import ConstraintRegister
-
-    register = ConstraintRegister().override(
-        ConstraintClass.LIFECYCLE_PRECEDENCE, strength=Strength.HARD
-    )
-    grounding = build_continuous_graph(
-        universe,
-        claims,
-        ReliabilityTable(),
-        copula=result.continuous.copula,
-        discrete=result.belief,
-        register=register,
-        seed=5,
-    )
-    assert grounding.graph.summary()["banks"].get("precedence", 0) > 0
 
 
-def test_disabling_precedence_is_reported_in_the_grounding(continuous_run):
-    _truth, universe, claims, result = continuous_run
-    grounding = build_continuous_graph(
-        universe,
-        claims,
-        ReliabilityTable(),
-        copula=result.continuous.copula,
-        discrete=result.belief,
-        spec=ContinuousSpec(precedence=False),
-        seed=5,
-    )
-    assert "precedence" not in grounding.graph.summary()["banks"]
 
 
 # -- behaviour: what the layer does, rather than how it computes it -----------------------
@@ -782,7 +536,7 @@ def test_agreeing_sources_sharpen_the_posterior():
 
 
 def test_the_student_t_channel_resists_an_outlier_where_a_gaussian_one_does_not():
-    """The reason design doc section 5.1 chooses Student-t, stated as a measurable difference."""
+    """The student t channel resists an outlier where a gaussian one does not."""
     marginal = GaussianMarginal(0.0, 1.0)
     reg = continuous_registry(1)
     honest = np.array([0.2, 0.3, 0.25])
@@ -854,49 +608,15 @@ def test_an_uncorrelated_attribute_borrows_nothing():
     assert result.var[1] == pytest.approx(1.0, abs=1e-6)
 
 
-def test_precedence_orders_the_events_it_is_grounded_on(continuous_run):
-    """The factor has to change the answer, not merely be present in the bank list."""
-    _truth, universe, claims, result = continuous_run
-    grounding = build_continuous_graph(
-        universe,
-        claims,
-        ReliabilityTable(),
-        copula=result.continuous.copula,
-        discrete=result.belief,
-        spec=ContinuousSpec(precedence_slack=0.5),
-        seed=5,
-    )
-    bank_index = next(
-        i for i, b in enumerate(grounding.graph.banks) if b.name == "precedence"
-    )
-    bank = grounding.graph.banks[bank_index]
-    edges = bank.edge_vars()
-    half = len(edges) // 2
-
-    with_factor = run_ep(grounding.graph, EPConfig(max_iter=400))
-    without = run_ep(
-        GaussianGraph(
-            grounding.graph.registry,
-            grounding.graph.var_ids,
-            [b for i, b in enumerate(grounding.graph.banks) if i != bank_index],
-        ),
-        EPConfig(max_iter=400),
-    )
-
-    def ordered(means):
-        return float(np.mean(means[edges[:half]] < means[edges[half:]]))
-
-    assert ordered(with_factor.mean) >= ordered(without.mean)
 
 
 def test_a_misstated_lifecycle_is_overruled_when_soft_and_obeyed_when_hard():
-    """Design doc section 8.3's sensitivity experiment, on the continuous side.
+    """Sensitivity to a misspecified temporal constraint.
 
     The whole point of registering precedence SOFT is that evidence can win. Asserting the
     order backwards against two confident, clearly-ordered claims must therefore leave the
     claims in charge -- while the same constraint made HARD overturns them, which is the
-    damage a wrong definitional rule does.
-    """
+    damage a wrong definitional rule does."""
     marginal = GaussianMarginal(0.0, 1.0)
     reg = continuous_registry(2)
     claims = ObservationBank(
@@ -916,21 +636,3 @@ def test_a_misstated_lifecycle_is_overruled_when_soft_and_obeyed_when_hard():
 
     assert soft.mean[0] > soft.mean[1], "a soft constraint must yield to good evidence"
     assert hard.mean[0] < hard.mean[1], "a hard one overrides it, which is the risk it carries"
-
-
-def test_a_decoy_event_keeps_its_bracket_prior(continuous_run):
-    """An assertion nobody can speak about must fall back, not invent a confident answer."""
-    truth, universe, claims, result = continuous_run
-    decoys = [
-        ref
-        for ref in continuous_refs(universe)
-        if ref.family is Family.EVENT_TIME and truth.truth(ref) is None
-    ]
-    assert decoys
-
-    for ref in decoys[:5]:
-        mean, var = result.belief.gaussian(ref)
-        assert np.isfinite(mean) and var > 0
-        lo, hi = result.belief.value_interval(ref, 0.9)
-        event = universe.events[ref.subject]
-        assert lo >= event.time_lo - 3.0 and hi <= event.time_hi + 3.0

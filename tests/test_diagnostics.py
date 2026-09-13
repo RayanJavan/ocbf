@@ -55,11 +55,10 @@ def test_chernoff_is_symmetric_in_its_two_sides():
 
 
 def test_weak_sources_cannot_reach_the_threshold():
-    """The central claim of Stage 1 section 4.2, as a test.
+    """Weak binary reports do not meet the declared information threshold.
 
     Three sources at 0.6 accuracy carry ~0.02 nats each. The eps=0.1 target is 2.3 nats.
-    No aggregation rule decides this assertion, and the report must say so.
-    """
+    No aggregation rule decides this assertion, and the report must say so."""
     refs = _refs(1)
     cs = _claims({f"s{i}": {0: True} for i in range(3)}, refs)
     rep = decidability(cs, {f"s{i}": 0.6 for i in range(3)}, eps=0.1)

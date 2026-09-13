@@ -16,13 +16,7 @@ from enum import Enum
 
 
 class Family(str, Enum):
-    """The assertion families of design doc section 1.1 (table A1-A9).
-
-    ``OBJECT_TYPE`` is absent by construction: Stage 1 decision 2 clamps instance identity
-    by default, and object type travels with identity (design doc section 1.2 -- an OCEL
-    2.0 registry entry cannot name its own attributes without its type). Event type is
-    latent because activity-label uncertainty is the domain's most common uncertainty.
-    """
+    """Supported semantic assertion families. Object identity and type are supplied by the schema and universe; event type, existence, links, timestamps and attributes have distinct references."""
 
     EVENT_EXISTS = "event_exists"
     EVENT_TYPE = "event_type"
@@ -40,7 +34,7 @@ class Family(str, Enum):
 
     @property
     def is_link(self) -> bool:
-        """E2O / O2O -- the primary inferential target of Stage 1 decision 2."""
+        """Whether this family describes a qualified E2O or O2O relation."""
         return self in (Family.E2O, Family.O2O)
 
     @property

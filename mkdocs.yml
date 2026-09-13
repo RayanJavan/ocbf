@@ -1,64 +1,71 @@
 site_name: OCBF
 site_description: >-
-  Object-Centric Belief Fusion — a joint probabilistic belief over a latent OCEL 2.0 log,
-  fused from many sparse, unreliable, structurally-typed sources.
-# mkdocs-llmstxt needs an absolute base to build its links from, so site_url has to be set
-# even though nothing is published there: Pages is unavailable for private repositories on
-# the GitHub Free plan, and the site ships as a CI artifact instead. The value names where
-# Pages would land, so turning it on later changes nothing here.
+  Object-Centric Belief Fusion: versioned evidence, explicit probability models,
+  and uncertainty-aware process queries.
 site_url: https://rayanjavan.github.io/ocbf/
 repo_url: https://github.com/RayanJavan/ocbf
 repo_name: RayanJavan/ocbf
-# "Edit this page" targets the source file -- for a generated reference page, the module it
-# documents rather than the build-time stub.
-edit_uri: blob/main/
-
-# `mkdocs build --strict` already fails on a link to a page that does not exist, but a link to
-# a *heading* that does not exist is only reported at INFO by default -- which is how a
-# cross-reference survives the section it points at being renamed. Promoting it to a warning
-# makes --strict catch that too.
+edit_uri: edit/main/docs/
+# The absolute base supports generated links; CI delivers the site as an artifact.
 validation:
-  anchors: warn
+  nav:
+    omitted_files: warn
+  links:
+    anchors: warn
+    not_found: warn
 
-# The docs tree follows Diátaxis: tutorial / how-to / reference / explanation are kept
-# strictly separate. Each answers a different question, and blending them is the failure
-# mode the framework exists to prevent -- a how-to that explains theory helps nobody in a
-# hurry, and an explanation interrupted by commands teaches nothing.
 nav:
-  - Home: index.md
+  - Overview:
+      - Home: index.md
+      - Workflow tour: overview/workflow.md
   - Getting started:
       - getting-started/index.md
       - Installation: getting-started/installation.md
-      - Quickstart: getting-started/quickstart.md
+      - First assessment: getting-started/quickstart.md
+  - Concepts:
+      - concepts/index.md
+      - Semantic context: concepts/semantics.md
+      - Evidence and observations: concepts/evidence.md
+      - Parameters and trust: concepts/parameters.md
+      - Models and constraints: concepts/model.md
+      - Inference and posteriors: concepts/inference.md
+      - Queries and result meaning: concepts/queries.md
+      - Revisions and execution: concepts/execution.md
   - How-to guides:
       - how-to/index.md
-      - Add your own source: how-to/add-a-source.md
-      - Inspect a belief state: how-to/inspect-beliefs.md
-      - Fuse timestamps and attributes: how-to/fuse-continuous.md
-      - Read the diagnostics: how-to/read-diagnostics.md
+      - Interpret evidence: how-to/interpret-evidence.md
+      - Revise evidence: how-to/revise-evidence.md
+      - Configure manual trust: how-to/configure-trust.md
       - Configure constraints: how-to/configure-constraints.md
-      - Benchmark against baselines: how-to/compare-baselines.md
-  - Explanation:
-      - explanation/index.md
-      - The regime: explanation/the-regime.md
-      - The model: explanation/the-model.md
-      - Inference: explanation/inference.md
-      - Diagnostics: explanation/diagnostics.md
-      - Research notes: explanation/research-notes.md
-      - Design record: explanation/design-record.md
-  - API reference: reference/
-  - About:
-      - about/index.md
-      - Limitations: about/limitations.md
-      - Glossary: about/glossary.md
+      - Choose inference: how-to/choose-inference.md
+      - Use joint inference: how-to/joint-inference.md
+      - Evaluate queries: how-to/evaluate-queries.md
+      - Read diagnostics: how-to/read-diagnostics.md
+      - Execution sessions: how-to/repeated-execution.md
+      - Export and replay: how-to/export-replay.md
+  - Reference:
+      - reference/index.md
+      - Capabilities and limitations: reference/capabilities.md
+      - Configuration and errors: reference/configuration.md
+      - Results and interchange: reference/results.md
+      - Glossary: reference/glossary.md
+      - API: reference/api/
+  - Integrations:
+      - integrations/index.md
+      - Mammut retrospective: integrations/mammut.md
+  - Development:
+      - development/index.md
+      - Architecture: development/architecture.md
+      - Extensions: development/extensions.md
+      - Validation: development/validation.md
+      - Documentation maintenance: development/documentation.md
 
 theme:
   name: material
+  font: false
   features:
     - navigation.tabs
     - navigation.sections
-    # navigation.indexes binds a section's index.md to the section itself. This replaces
-    # the mkdocs-section-index plugin, which conflicts with it -- do not add both.
     - navigation.indexes
     - navigation.top
     - navigation.tracking
@@ -66,20 +73,21 @@ theme:
     - search.suggest
     - search.highlight
     - content.code.copy
+    - content.action.edit
     - content.code.annotate
     - content.tooltips
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
-      accent: indigo
+      primary: teal
+      accent: teal
       toggle:
         icon: material/weather-night
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: indigo
-      accent: indigo
+      primary: teal
+      accent: cyan
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
@@ -96,26 +104,28 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
-      permalink_title: Link to this section
   - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+      dedent_subsections: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
-  - pymdownx.tasklist:
-      custom_checkbox: true
   - pymdownx.arithmatex:
       generic: true
 
 plugins:
   - search
-  # Generates one Markdown stub per module at build time, so the API reference cannot
-  # drift out of sync with the package the way a hand-maintained page would.
   - gen-files:
       scripts:
         - scripts/gen_ref_pages.py
@@ -126,56 +136,58 @@ plugins:
       handlers:
         python:
           paths: [.]
-          # Cross-link into the stdlib and our numeric dependencies, so annotations like
-          # numpy.ndarray resolve to their upstream documentation instead of dead text.
           inventories:
             - https://docs.python.org/3/objects.inv
             - https://numpy.org/doc/stable/objects.inv
           options:
-            # -- docstrings ---------------------------------------------------------
             docstring_style: google
             docstring_section_style: table
             merge_init_into_class: true
-            # Show every public member. In a reference, a member that exists but is not
-            # listed is a hole -- the reader cannot tell "absent" from "undocumented".
             show_if_no_docstring: true
-            # -- headings -----------------------------------------------------------
             heading_level: 2
             show_root_heading: true
             show_root_full_path: false
             show_symbol_type_heading: true
             show_symbol_type_toc: true
-            # -- members ------------------------------------------------------------
             inherited_members: false
             members_order: source
             filters: ["!^_"]
             summary: true
-            # -- signatures ---------------------------------------------------------
             separate_signature: true
             show_signature_annotations: true
             signature_crossrefs: true
             line_length: 88
-            # -- source -------------------------------------------------------------
             show_source: true
             show_labels: true
-  # Publishes llms.txt / llms-full.txt so an agent can consume the whole site as text.
-  # The nav order below is the reading order an agent should follow.
   - llmstxt:
+      full_output: llms-full.txt
       markdown_description: >-
-        OCBF fuses many sparse, individually unreliable, structurally-typed sources into a
-        joint probabilistic belief over a latent OCEL 2.0 object-centric event log.
+        OCBF is a modular Python library for versioned evidence, explicit probability
+        models, qualified posterior capabilities, and object-centric process queries.
       sections:
+        Overview:
+          - index.md
+          - overview/*.md
         Getting started:
           - getting-started/*.md
+        Concepts:
+          - concepts/*.md
         How-to guides:
           - how-to/*.md
-        Explanation:
-          - explanation/*.md
-        About:
-          - about/*.md
+        Reference:
+          - reference/*.md
+          - reference/api/ocbf/**/*.md
+          - reference/api/ocbf.md
+        Integrations:
+          - integrations/*.md
+        Development:
+          - development/*.md
 
+extra_css:
+  - stylesheets/extra.css
 extra_javascript:
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
-
 watch:
   - ocbf
+  - examples
+  - scripts

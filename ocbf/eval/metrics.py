@@ -103,14 +103,9 @@ def evaluate_binary(
     threshold: float = 0.5,
     n_bins: int = 10,
 ) -> BinaryReport:
-    """Score a belief state against ground truth on binary assertions.
+    """Score binary marginals against supplied reference truth.
 
-    ``accuracy_decidable`` is reported separately from ``accuracy`` on purpose. The
-    decidability flag (design doc section 7.2) claims that assertions above the evidence
-    threshold are the ones we can actually call; if that claim is true, accuracy on the
-    decidable subset should be materially higher than overall. If it is not, the
-    decidability test is miscalibrated and the flag is worse than useless.
-    """
+    Report overall accuracy separately from accuracy on the subset marked decidable. The evidence threshold is model-specific and does not certify physical accuracy."""
     candidates = list(refs) if refs is not None else [r for r in truth if isinstance(truth[r], bool)]
     pairs = [
         (r, bool(truth[r]))

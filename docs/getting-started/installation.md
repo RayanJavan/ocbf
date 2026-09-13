@@ -1,16 +1,17 @@
 # Installation
 
-OCBF requires **Python 3.12 or later**.
+OCBF requires **Python 3.12 or later**. The commands below install the current checkout.
 
-## Install
+## Create an environment
 
-=== "Windows (PowerShell)"
+=== "PowerShell"
 
     ```powershell
     git clone https://github.com/RayanJavan/ocbf.git
     cd ocbf
     py -3.12 -m venv .venv
-    .venv\Scripts\python -m pip install -e ".[bayes,dev]"
+    .venv\Scripts\Activate.ps1
+    python -m pip install -e .
     ```
 
 === "Linux / macOS"
@@ -19,74 +20,53 @@ OCBF requires **Python 3.12 or later**.
     git clone https://github.com/RayanJavan/ocbf.git
     cd ocbf
     python3.12 -m venv .venv
-    .venv/bin/python -m pip install -e ".[bayes,dev]"
+    source .venv/bin/activate
+    python -m pip install -e .
     ```
 
-## Dependency groups
+If PowerShell does not permit activation, use `.venv\Scripts\python.exe` in place of
+`python`. All subsequent commands assume the repository root and selected environment.
 
-| extra | brings in | needed for |
-| --- | --- | --- |
-| *(base)* | numpy, scipy, pandas, networkx | the factor graph, BP engine, diagnostics, baselines |
-| `bayes` | pymc, arviz | the hierarchical reliability GLM — the parameter block |
-| `inference` | torch | reserved for the planned GPU message-passing backend |
-| `io` | pm4py | OCEL 2.0 file round-tripping *(not yet wired up)* |
-| `oracles` | gtsam, pyagrum, problog | the exact-inference oracle — only `gtsam` is wired up |
-| `docs` | mkdocs-material, mkdocstrings, … | building this site |
-| `dev` | pytest, hypothesis, matplotlib | running the test suite |
-
-Without `bayes` everything still runs — the pipeline falls back to the label-free triplet
-estimates. You lose the pooling, which in a sparse regime is most of the value, so install
-it unless you have a reason not to.
-
-!!! tip "`gtsam` is optional, and on Windows it needs the CUDA runtime on the DLL path"
-
-    GTSAM backs the [exact oracle](../explanation/inference.md#the-exact-oracle). Nothing in
-    the pipeline calls it, so skipping it loses a check rather than a capability — the suite
-    skips those tests and passes without it.
-
-    A CUDA-enabled `gtsam.dll` imports the CUDA runtime by name, and Windows resolves that on
-    the *DLL search path* rather than on `PATH`, so a plain `import gtsam` fails with a bare
-    "DLL load failed". [`ocbf.backends`][ocbf.backends] is the fix: it registers the toolkit
-    directories once, and every consumer imports through it.
-
-    ```powershell
-    .venv\Scripts\python -m pip install gtsam
-    .venv\Scripts\python -c "from ocbf.backends import report; print(report())"
-    ```
-
-    `report()` names the directories it searched, so a failure is a path to fix rather than a
-    hex address. Set `OCBF_CUDA_BIN` if your toolkit is somewhere non-standard.
-
-## Verify
+## Verify a useful calculation
 
 ```bash
-.venv/Scripts/python -m pytest -q
+python -m examples.fixed_parameters
 ```
 
-Expect **154 passed**. The run takes about three minutes, most of it in the end-to-end
-tests in `tests/test_pipeline.py`, which fuse real generated worlds rather than fixtures.
+This uses `reference_elimination`, which runs on the core dependencies. It calculates
+synthetic query results and verifies replay. Continue with the [quickstart](quickstart.md).
 
-To check the numerics specifically:
+## Install only the extras you need
+
+| Installation | Purpose |
+|---|---|
+| `pip install -e .` | NumPy/SciPy computation, evidence, models, queries, neutral interchange, and supporting utilities. |
+| `pip install -e ".[oracles]"` | Optional GTSAM backend and discrete numerical oracle. |
+| `pip install -e ".[dev]"` | Tests and numerical evaluation tooling. |
+| `pip install -e ".[docs]"` | MkDocs Material, generated reference, and machine-readable documentation. |
+
+The tutorial selects its engine explicitly. `InferencePolicy()` defaults to
+`gtsam_exact`; a bare inference call therefore requires that backend. Automatic routing
+is [opt-in](../how-to/choose-inference.md).
+
+### Optional GTSAM on Windows
 
 ```bash
-.venv/Scripts/python -m pytest tests/test_exactness.py -q
+python -m pip install -e ".[oracles]"
+python -c "from ocbf.backends import report; print(report())"
 ```
 
-This compares belief propagation against brute-force enumeration, including the cardinality
-forward–backward recursion across five `(k, lo, hi)` shapes. It is the load-bearing test:
-that recursion replaces a `2^k` factor, and an error in it would be invisible in aggregate
-metrics while quietly corrupting every constrained group in the model.
+A CUDA-enabled GTSAM build may need its CUDA runtime DLL directory registered.
+`ocbf.backends` performs discovery and reports the paths it inspected. Use
+`OCBF_CUDA_BIN` when the runtime is installed in a location that discovery does not cover.
+This is a backend-loading requirement, not a GPU capability of OCBF.
 
-## Building the documentation
+## Build the documentation
 
 ```bash
-.venv/Scripts/python -m pip install -e ".[docs]"
-.venv/Scripts/mkdocs serve
+python -m pip install -e ".[docs]"
+python -m mkdocs serve
 ```
 
-The site rebuilds on changes to both `docs/` and `ocbf/`, so editing a docstring updates the
-API reference live.
-
-## Next
-
-Continue to the **[Quickstart](quickstart.md)**.
+The API reference is generated at build time from the documented public modules.
+Use the [development checks](../development/validation.md) when changing the library.

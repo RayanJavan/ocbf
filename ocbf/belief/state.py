@@ -17,15 +17,9 @@ if TYPE_CHECKING:  # a contract type must not depend on the model that fills it
 
 
 class Verdict(str, Enum):
-    """A three-valued answer.
+    """Three-valued static-evidence decision.
 
-    ``UNDETERMINED`` is not "probability near 0.5" -- it is "the evidence on this assertion
-    is below what any aggregation rule would need to decide it", from the sample-complexity
-    bound of Stage 1 section 4.2. An assertion can have posterior 0.8 and still be
-    ``UNDETERMINED`` if that 0.8 rests on one barely-better-than-chance source; and it can
-    have posterior 0.55 and be ``DECIDABLE``-but-genuinely-balanced. Conflating the two is
-    the failure this type exists to prevent.
-    """
+    ``UNDETERMINED`` records insufficient evidence under the declared binary-channel threshold, even when structural messages produce a strong marginal. It is not a calibrated correctness probability."""
 
     TRUE = "true"
     FALSE = "false"
@@ -52,7 +46,7 @@ class BeliefStateBuilder:
         self._prior_only = np.ones(n, dtype=bool)
 
         # Uninformative defaults, so an untouched variable answers with its prior rather
-        # than with a crash or an arbitrary 0.5 (design doc section 10, item 10).
+        # than with a crash or an arbitrary 0.5.
         card = registry.cardinalities
         for i in range(n):
             c = int(card[i])
@@ -79,17 +73,9 @@ class BeliefStateBuilder:
         mixture: tuple[np.ndarray, np.ndarray, np.ndarray] | None = None,
         prior_only: bool = False,
     ) -> None:
-        """Record a Gaussian posterior in **latent** copula units.
+        """Record latent Gaussian moments and an optional observed-unit marginal transform.
 
-        ``marginal`` is the transform back to observed units. Attaching it here rather than
-        converting eagerly keeps one representation of the truth: the engine's moments stay
-        exactly as produced, and `BeliefState.value` derives observed quantities from them on
-        demand. A variable whose marginal is absent can still be read in latent units, and
-        asking for its value says so rather than guessing at the units.
-
-        ``mixture`` carries the uncollapsed conditional-Gaussian components where a factor
-        produced them -- the validation path of design doc section 4.3.
-        """
+        An optional uncollapsed mixture supports comparison with local moment matching. The caller supplies all values; no dependence is reconstructed from separate marginals."""
         if var <= 0:
             raise ValueError(f"variable {idx} needs positive variance, got {var}")
         self.mean[idx] = mean
@@ -129,13 +115,9 @@ class BeliefStateBuilder:
 
 
 class BeliefState:
-    """A sealed posterior over the latent world.
+    """Immutable assertion-marginal view for numerical utilities.
 
-    Discrete beliefs are stored in a padded ``(n_vars, max_cardinality)`` array so that
-    marginal extraction, calibration and thresholding are vectorised. Continuous beliefs
-    are Gaussian ``(mean, var)`` pairs -- the moment-matched representation the EP engine
-    of design doc section 4.3 produces natively.
-    """
+    Discrete beliefs use padded arrays. Continuous values retain latent Gaussian moments, optional observed-unit transforms and optional local mixture components. This representation does not imply a coherent joint-history distribution. Message decompositions explain numerical contributions, not source-removal effects."""
 
     __slots__ = (
         "registry",
@@ -188,12 +170,7 @@ class BeliefState:
         return self._probs[idx, :c].copy()
 
     def gaussian(self, ref: AssertionRef) -> tuple[float, float]:
-        """Continuous posterior as ``(mean, variance)`` in **latent** copula units.
-
-        Latent, not observed: this is the moment-matched representation the expectation
-        propagation engine of design doc section 4.3 produces natively. `value` and
-        `value_interval` convert to hours, euros or counts.
-        """
+        """Return continuous ``(mean, variance)`` in latent copula coordinates. Use the attached transform for observed-unit summaries. The local Gaussian approximation need not preserve multimodality."""
         idx = self.registry.index(ref)
         if int(self.registry.cardinalities[idx]) != 0:
             raise TypeError(f"{ref} is discrete; use marginal()")
@@ -229,14 +206,7 @@ class BeliefState:
         return float(transform.to_value(mean - half)), float(transform.to_value(mean + half))
 
     def mixture(self, ref: AssertionRef) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
-        """Uncollapsed conditional-Gaussian components as ``(weights, means, variances)``.
-
-        Present only where a CG factor produced a mixture and the engine retained it. The
-        Gaussian returned by `gaussian` is that mixture's moment-matched collapse, so
-        comparing the two is how the approximation of design doc section 4.3 is checked
-        rather than assumed. ``None`` means the variable was never CG-coupled, so there is
-        nothing collapsed to inspect.
-        """
+        """Return retained uncollapsed ``(weights, means, variances)`` for a local conditional-Gaussian message. This is available only when the numerical calculation retained those components; it is not a general joint posterior."""
         idx = self.registry.get(ref)
         return None if idx is None else self._mixtures.get(idx)
 
@@ -260,11 +230,9 @@ class BeliefState:
             ) from None
 
     def prob_true(self, ref: AssertionRef, default: float = 0.5) -> float:
-        """``P(assertion is true)`` for a binary assertion.
+        """Return a binary assertion marginal.
 
-        Returns ``default`` for refs outside the active graph -- the prior-only answer
-        promised by design doc section 2.3, rather than a ``KeyError``.
-        """
+        For a reference outside the active registry, return the explicitly supplied ``default``. That fallback is a caller convention, not an inferred probability for an absent candidate."""
         idx = self.registry.get(ref)
         if idx is None:
             return default
@@ -341,12 +309,9 @@ class BeliefState:
     # -- attribution ----------------------------------------------------------------
 
     def attribution(self, ref: AssertionRef) -> dict[str, float]:
-        """Additive contributions to the posterior log-odds.
+        """Return additive incoming-message contributions to binary posterior log odds.
 
-        For a binary assertion the posterior log-odds decomposes over incoming messages,
-        so this is not extra computation -- it is the retained messages (design doc
-        section 6.5). Keys name a source id, a factor family, or ``"prior"``.
-        """
+        These contributions decompose a numerical belief calculation. Removing a report family requires a separately constructed model and inference run."""
         idx = self.registry.get(ref)
         return dict(self._attribution.get(idx, {})) if idx is not None else {}
 

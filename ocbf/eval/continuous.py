@@ -1,23 +1,7 @@
-"""Scoring rules, sharpness and calibration for continuous assertions.
+"""Continuous calibration and scoring against supplied reference values.
 
-The continuous counterpart of [`ocbf.eval.metrics`][ocbf.eval.metrics], and it keeps that
-module's priority: **calibration is the thing being measured**, not point accuracy. Stage 1
-section 3.2 found that the payoff from fusion is in calibration, and a continuous harness
-that reported only a root-mean-square error would be measuring the wrong thing just as
-surely as a binary one that reported only accuracy.
-
-Two quantities are reported in **latent** copula units and two in observed units, and the
-split is deliberate rather than a convenience.
-
-*Latent, because it is exact and comparable.* The posterior is a Gaussian on the latent
-coordinate, so its CRPS has a closed form there and nothing is approximated. Interval
-coverage is *identical* in both spaces -- the marginal transform is monotone, so an interval
-contains the truth in one space exactly when its image does in the other -- and a latent
-CRPS is on a standardised scale, so a timestamp in hours and a price in euros can be
-averaged into one number that means something.
-
-*Observed, because it is what a reader can judge.* An error of 0.3 latent units answers no
-practical question; 2.1 hours does.
+CRPS, probability integral transforms and interval coverage compare predictive summaries
+with reference truth. The reference's physical quality must be established separately.
 """
 
 from __future__ import annotations
@@ -162,13 +146,7 @@ def compare_continuous(
     *,
     mass: float = 0.9,
 ) -> dict[str, dict[str, float | int]]:
-    """Score several methods on the identical assertion set.
-
-    Identical for every method, which is why the refs are resolved once here rather than per
-    method: a comparison in which one method is scored on the assertions it happened to have
-    an opinion about is not a comparison. Design doc section 8.3 makes running a baseline
-    every time mandatory, and this is how the continuous half of that is honoured.
-    """
+    """Score methods on the same supplied assertion set and reference truth. Resolve references once so missing predictions cannot silently change the comparison population."""
     keys = list(refs) if refs is not None else list(truth)
     return {
         name: evaluate_continuous(b, truth, keys, mass=mass).as_dict()

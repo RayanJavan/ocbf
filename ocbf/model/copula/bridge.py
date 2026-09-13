@@ -1,42 +1,4 @@
-"""Latent correlations from Kendall's tau, via bridge functions.
-
-Design doc section 4.1 chooses a **rank-based** estimator for the latent correlation matrix,
-and the choice is a regime decision rather than a statistical preference. A parametric
-mixed MRF needs enough observations per edge to fit a likelihood; rank correlations are
-estimable from far fewer, which is what the sparse regime leaves us with
-(research notes section 7.2).
-
-The device is a **bridge function**. For two variables that are monotone images of a
-bivariate normal with latent correlation ``rho``, the population Kendall's tau is a fixed,
-strictly increasing function of ``rho``:
-
-```text
-tau  =  bridge(rho)        =>        rho = bridge^-1( tau_hat )
-```
-
-For two continuous marginals the bridge is the classical closed form
-``tau = (2 / pi) * arcsin(rho)``. Discreteness -- ordinal levels, a binary threshold, a
-truncated floor -- introduces ties, which shrink tau toward zero, and the bridge for each
-such pair is a different (and considerably longer) expression.
-
-Rather than transcribe one closed form per pair of kinds, this module evaluates the bridge
-**once per pair of marginals** by seeded simulation on a grid of ``rho`` and inverts it by
-monotone interpolation. Three reasons, in order of weight:
-
-* **It is uniform.** Every combination of the five copula kinds -- including the truncated
-  one, whose closed form is the most awkward -- goes through the same code path, so there
-  is one thing to get right instead of ten.
-* **It is checkable.** The simulated bridge must reproduce the closed form on the
-  continuous-continuous pair, and the test suite checks exactly that. A wall of
-  special-case formulas offers no such internal cross-check.
-* **It is not on any hot path.** Bridges are evaluated when the copula is fitted, not per
-  message; the simulation cost is invisible next to inference.
-
-The price is Monte Carlo error in the estimated correlation, which
-[`bridge_correlation`][ocbf.model.copula.bridge.bridge_correlation] controls with a fixed
-sample size and a fixed seed -- so the result is *deterministic*, and the same inputs give
-the same correlation on every run.
-"""
+"""Estimate latent Gaussian correlations from Kendall rank association through declared marginal bridge functions. The bridge accounts for discretized marginals and uses bounded numerical inversion."""
 
 from __future__ import annotations
 

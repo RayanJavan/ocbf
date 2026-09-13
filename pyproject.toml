@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ocbf"
 version = "0.1.0"
-description = "Object-Centric Belief Fusion: joint probabilistic belief over an OCEL 2.0 log fused from many sparse, unreliable sources"
+description = "Object-Centric Belief Fusion: versioned evidence, explicit probability models, and uncertainty-aware process queries"
 requires-python = ">=3.12"
 dependencies = [
     "numpy>=1.26",
@@ -15,22 +15,22 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-inference = ["torch>=2.4"]
-bayes = ["pymc>=5.16", "arviz>=0.18"]
-oracles = ["pyagrum>=1.13", "gtsam>=4.2", "problog>=2.2"]
-io = ["pm4py>=2.7"]
+oracles = ["gtsam>=4.2"]
 dev = ["pytest>=8.0", "hypothesis>=6.100", "matplotlib>=3.8"]
 docs = [
-    "mkdocs-material>=9.5",
+    "mkdocs>=1.6.1,<2",
+    "mkdocs-material>=9.7.7,<9.8",
     # mkdocstrings formats rendered signatures with Ruff when it is importable and leaves
     # them on one long line when it is not, so the `line_length` setting in mkdocs.yml is
     # inert without it -- and the site would render differently in CI than on a developer
     # machine that happens to have Ruff installed.
-    "ruff>=0.6",
-    "mkdocstrings[python]>=0.26",
-    "mkdocs-gen-files>=0.5",
-    "mkdocs-literate-nav>=0.6",
-    "mkdocs-llmstxt>=0.1",
+    "ruff>=0.16.6,<0.17",
+    "mkdocstrings[python]>=1.0.6,<1.1",
+    "mkdocstrings-python>=2.0.8,<2.1",
+    "pymdown-extensions>=11.0.2,<11.1",
+    "mkdocs-gen-files>=0.6.1,<0.7",
+    "mkdocs-literate-nav>=0.6.3,<0.7",
+    "mkdocs-llmstxt>=0.5.0,<0.6",
 ]
 
 [tool.setuptools.packages.find]

@@ -1,25 +1,8 @@
-"""The latent Gaussian copula: the transform half of the continuous layer.
+"""Monotone marginal transforms and Gaussian dependence utilities.
 
-Design doc section 4.1 models every *ordered* quantity -- timestamps, and continuous, count,
-ordinal, binary and truncated attributes -- as a monotone image of a latent Gaussian. The
-whole mixed-attribute problem then collapses into a single Gaussian block, and that block is
-what [`ocbf.inference.gabp_ep`][ocbf.inference.gabp_ep] runs on.
-
-Three pieces:
-
-* [`marginals`][ocbf.model.copula.marginals] -- the per-quantity transform ``v = F^-1(Phi(z))``,
-  with discrete kinds **interval-censored** rather than mapped to a point;
-* [`bridge`][ocbf.model.copula.bridge] -- latent correlations from Kendall's tau. Rank-based
-  because the sparse regime cannot afford a parametric mixed MRF's data appetite
-  (research notes section 7.2);
-* [`structure`][ocbf.model.copula.structure] -- which templates are in the block and where
-  the latent precision is allowed to be non-zero.
-
-The honest boundary is stated once and enforced by
-[`AttributeKind.in_copula`][ocbf.schema.core.AttributeKind.in_copula]: **unordered
-categoricals are not in this layer**. They have no monotone image in a Gaussian and stay
-discrete (design doc section 4.2). That is a real limitation of the copula approach rather
-than an implementation gap.
+Transforms map admitted continuous, ordinal or count marginals to standardized latent
+coordinates. Unordered categories are excluded. Caller-grounded Gaussian inference needs
+these transforms to translate latent marginal summaries back to observed units.
 """
 
 from ocbf.model.copula.bridge import (

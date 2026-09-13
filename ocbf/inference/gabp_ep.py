@@ -1,35 +1,6 @@
-"""Gaussian belief propagation with expectation-propagation sites -- the continuous engine.
+"""Gaussian belief propagation with expectation-propagation sites.
 
-Design doc section 4.3 commits to **one** algorithm for the whole continuous layer. A copula
-warp, an interval censoring, a precedence truncation and a conditional-Gaussian mixture are
-not four inference problems; they are four ways of computing a tilted moment, after which
-every one of them projects back to a Gaussian and propagates. This module is that single
-algorithm, and the four cases live in
-[`ocbf.model.gaussian_banks`][ocbf.model.gaussian_banks] as banks it cannot tell apart.
-
-The loop is deliberately the same shape as
-[`ocbf.inference.loopy_bp`][ocbf.inference.loopy_bp] -- scatter-add, belief, cavity by
-subtraction, per-bank update, damped write-back -- because it is the same algorithm over a
-different message algebra. Log-potential rows become natural parameters; ``logsumexp``
-becomes moment matching. Anyone who can read one engine can read the other.
-
-The same hygiene applies, and for the same reasons: damping, oscillation detection, an
-iteration cap that reports non-convergence rather than returning the last sweep, and
-**convergence judged on beliefs rather than on messages** (design doc section 11.6). One
-thing is easier here than in the discrete engine: the latent coordinates are standard normal
-by construction of the copula, so a single tolerance is meaningful across a block mixing
-timestamps in hours with prices in euros.
-
-Two failure modes are specific to expectation propagation and are handled explicitly rather
-than hoped away:
-
-* **An improper cavity.** Removing a site's own contribution can leave non-positive
-  precision. The update for that edge is skipped for the sweep rather than clipped, because
-  clipping would invent evidence the graph does not contain.
-* **A tilted distribution that underflows.** A claim far out in the cavity's tail can leave
-  no quadrature mass. The bank contributes no site rather than a fabricated one, and the
-  count is reported.
-"""
+Banks supply cavity-to-site updates; non-Gaussian sites use tilted moments. Damping, iteration limits and belief residuals assess numerical convergence. Caller-grounded EP returns marginal moments, not a general joint-history representation."""
 
 from __future__ import annotations
 
@@ -64,13 +35,11 @@ class EPConfig:
     """
 
     max_iter: int = 800
-    """Sweep cap, well above the discrete engine's -- and coupled to `degree_scaled_damping`.
+    """Maximum sweeps, interpreted together with ``degree_scaled_damping``.
 
-    A step divided by a variable's degree needs proportionally more sweeps to accumulate its
-    precision, and stopping early shows up not as an error but as intervals that are too
-    wide, which is the quietest possible failure. The two settings are one decision; design
-    record section 11.9 has the measurements. Affordable because the Gaussian block holds
-    timestamps and attributes rather than links, so it is far smaller than the discrete graph.
+    Scaling updates by degree can require more sweeps to accumulate precision. Inspect
+    belief residuals and convergence status: an iteration cap alone does not establish
+    accurate variances. Work and memory depend on the caller-grounded graph.
     """
 
     damping: float = 0.8
@@ -87,18 +56,7 @@ class EPConfig:
     oscillation_window: int = 12
 
     degree_scaled_damping: bool = True
-    """Divide each edge's step by the number of sites on its variable.
-
-    A synchronous sweep updates every site on a variable against a cavity that all the other
-    sites are simultaneously moving, so a variable carrying ``d`` sites takes a step roughly
-    ``d`` times too large. Dividing by the degree is the correction.
-
-    What it buys is *not* a better answer -- both settings reach the same posterior. What
-    differs is that the scaled residual falls monotonically while the unscaled one oscillates
-    around the fixed point, so convergence cannot be told from wobble. Design doc section 11.6
-    makes the residual the thing convergence is judged on, so a residual that reports nothing
-    is the failure being avoided.
-    """
+    """Divide each edge update by the number of sites on its variable. This can stabilize synchronous updates; it does not guarantee convergence or improve the target's physical accuracy."""
 
     track_attribution: bool = True
 
@@ -163,7 +121,7 @@ def run_ep(graph: GaussianGraph, config: EPConfig | None = None) -> EPResult:
         natural = graph.prior + scatter_add(edge_var, messages, n_vars)
         new_mean, new_var = to_moments(natural)
 
-        # Beliefs, not messages: the same finding as design doc section 11.6. Both moments
+        # Convergence uses belief residuals. Both moments
         # count -- a mean that has settled while the variance is still moving is not a
         # converged posterior. The standard deviation is compared rather than the variance
         # so both terms are in the same units as the tolerance.
@@ -244,16 +202,9 @@ def cavities(graph: GaussianGraph, result: EPResult) -> np.ndarray:
 def cg_discrete_potentials(
     graph: GaussianGraph, result: EPResult
 ) -> dict[int, np.ndarray]:
-    """``log p(continuous evidence | discrete state)`` per coupled continuous variable.
+    """Compute the conditional-Gaussian log evidence for each coupled discrete state.
 
-    The exact, closed-form half of the conditional-Gaussian coupling (design doc
-    section 4.3). Collected here rather than inside the engine because it is the *hybrid*
-    loop's business: the Gaussian engine has no discrete variables, and giving it any would
-    blur the split that makes both engines simple.
-
-    Keyed by block position; the hybrid loop maps each to the discrete variable the bank was
-    grounded against and attaches the row as a unary log-potential.
-    """
+    This local analytic message preserves state-dependent integration constants; coupling it to an approximate Gaussian belief does not establish global exact inference."""
     cavity = cavities(graph, result)
     out: dict[int, np.ndarray] = {}
     for i, bank in enumerate(graph.banks):

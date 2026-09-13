@@ -1,9 +1,7 @@
-"""OCEL 2.0 schema: the strictly-clamped part of the world.
+"""Fixed object/event types, qualified relations and constraint declarations.
 
-Per Stage 2 decision 2 the schema is *definitional* -- it is never inferred. It supplies
-the type system, the legal qualifier signatures, the attribute frames, the multiplicity
-declarations and the lifecycle orderings, and it drives both candidate pruning
-(``ocbf.universe``) and the hard factors (``ocbf.model.factors.hard_schema``).
+Schema values define semantic meanings. Candidate instances and interpreted evidence are
+supplied separately. Classify constraints explicitly as support, descriptive or normative.
 """
 
 from ocbf.schema.constraints import ConstraintClass, ConstraintRegister, ConstraintSpec, Strength

@@ -1,10 +1,7 @@
-"""Synthetic ground truth and source simulation.
+"""Explicitly synthetic object-centric processes and corrupted static sources.
 
-Design doc section 9.4 puts this *before* the inference engine in the build order, for two
-reasons. Ground truth is the only way to measure calibration, which Stage 1 section 3.2
-identifies as where the value actually is. And building the generator first forces the
-data model to be honest -- if the schema and universe cannot express a realistic
-object-centric process, that shows up here rather than three modules later.
+Generators retain reference truth for numerical comparisons. They are evaluation utilities;
+no generated identity, report or parameter should be treated as observed factory evidence.
 """
 
 from ocbf.synth.corrupt import SourceRegime, simulate_sources

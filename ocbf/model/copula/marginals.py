@@ -1,33 +1,4 @@
-"""Monotone marginal transforms between an observed value and the latent Gaussian.
-
-Design doc section 4.1. Every *ordered* quantity in the model -- a timestamp, a continuous
-or count or ordinal or binary or truncated attribute -- is treated as the image of a latent
-standard Gaussian under a monotone map:
-
-```text
-v = F^-1( Phi(z) )          z = Phi^-1( F(v) )
-```
-
-That single device is what collapses five observed types into one Gaussian block, which is
-in turn what lets the whole continuous layer run on one inference algorithm (design doc
-section 4.3) instead of five.
-
-Two properties every transform here guarantees, because the rest of the layer depends on
-them:
-
-1. **`to_value` and `to_latent` are inverses**, and both are monotone non-decreasing. The
-   engine reasons in latent space and reports in observed space, so a transform that is
-   not a bijection would make those two accounts disagree.
-2. **The latent side is standardised.** ``z`` is a standard normal by construction, so a
-   tolerance, a prior width or a residual expressed in latent units means the same thing
-   for a timestamp in hours and for a price in euros. The EP engine's convergence
-   tolerance relies on exactly this.
-
-Discrete kinds are **interval-censored** rather than mapped to a point: observing count
-``k`` says only that ``z`` fell between two cutpoints.
-`to_latent_interval` is the primitive the engine consumes; `to_latent` returns a
-representative point inside that interval for callers that need one.
-"""
+"""Monotone transforms between observed ordered values and standardized Gaussian coordinates. Continuous values use point transforms; discrete ordered values use latent censoring intervals. Unordered categories are outside this representation."""
 
 from __future__ import annotations
 
@@ -94,13 +65,7 @@ class MarginalTransform(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class GaussianMarginal:
-    """An affine transform, ``v = mean + sd * z``.
-
-    The simplest marginal, and the default for timestamps. Affinity is worth having rather
-    than merely convenient: it makes the observed-space and latent-space accounts of a
-    *difference* agree exactly, so the lifecycle precedence factor of design doc
-    section 3.3 is exact under this marginal rather than approximate.
-    """
+    """Affine marginal transform ``v = mean + sd*z``. Linear transforms also allow differences to be expressed exactly in latent coordinates when the remaining model assumptions permit it."""
 
     mean: float = 0.0
     sd: float = 1.0
@@ -285,12 +250,7 @@ class OrdinalMarginal:
 
 @dataclass(frozen=True, slots=True)
 class TruncatedMarginal:
-    """A point mass at a floor, plus a continuous tail above it.
-
-    The zero-inflated case of design doc section 4.1: "no discount applied" and "a discount
-    of 4.20" are not two draws from one continuous law. The floor is censored -- it says
-    only that ``z`` fell below the cutpoint -- while the tail is a point observation.
-    """
+    """Marginal transform with a point mass at a floor and a continuous tail above it. Values at the floor represent interval censoring in latent coordinates."""
 
     point: float
     point_mass: float
@@ -352,23 +312,13 @@ def fit_marginal(
     kind: AttributeKind = AttributeKind.CONTINUOUS,
     spec: AttributeSpec | None = None,
 ) -> MarginalTransform:
-    """Fit the transform appropriate to an attribute kind.
-
-    Dispatches on the kind the *schema* declares, which is why
-    [`AttributeSpec`][ocbf.schema.core.AttributeSpec] carries one: the modeller states what
-    a quantity is, and the transform follows from that rather than from a guess about the
-    observed values. ``spec`` wins over ``kind`` when both are given.
-
-    Raises:
-        ValueError: for ``CATEGORICAL``, which has no monotone image in a Gaussian and
-            stays in the discrete layer (design doc section 4.2).
-    """
+    """Fit a standalone marginal transform for the schema-declared attribute kind. Unordered categorical attributes are rejected because they lack a monotone Gaussian transform."""
     if spec is not None:
         kind = spec.kind
     if not kind.in_copula:
         raise ValueError(
-            f"{kind.value} has no monotone transform to a latent Gaussian; unordered "
-            "categoricals stay in the discrete layer (design doc section 4.2)"
+            f"{kind.value} has no monotone transform to a latent Gaussian; "
+            "use a finite categorical variable for unordered values"
         )
     match kind:
         case AttributeKind.CONTINUOUS:

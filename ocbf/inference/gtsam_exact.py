@@ -1,27 +1,9 @@
-"""Exact discrete inference through GTSAM -- the verification oracle.
+"""Bounded exact oracle for discrete numerical factor graphs.
 
-Design doc section 6.3 puts an exact engine at tier 1 and states its job plainly: a system
-whose core is an approximation needs ground truth to measure the approximation against.
-Until now the only oracle was brute-force enumeration in ``tests/test_exactness.py``, which
-is exact but costs ``prod(cardinalities)`` and so runs out at a handful of variables --
-small enough that the loopy structure the engine actually meets is out of reach.
-
-GTSAM's `DiscreteFactorGraph` eliminates instead of enumerating, so its cost is exponential
-in the *treewidth* rather than in the variable count. A dozen cardinality groups coupled
-through shared endpoints is hopeless to enumerate and unremarkable to eliminate, and that
-is precisely the shape where loopy BP stops being exact and starts needing to be checked.
-
-Scope, stated so it is not overread:
-
-* **Discrete backbone only.** The tier-4 role design doc section 6.3 reserves for GTSAM --
-  hybrid discrete-continuous MAP -- would need the continuous block expressed as a GTSAM
-  hybrid factor graph, which [`ocbf.inference.gabp_ep`][ocbf.inference.gabp_ep] has no reason
-  to produce. This is the tier-1 role instead; see design doc section 11.13.
-* **CPU.** GTSAM's CUDA acceleration is in its nonlinear least-squares solvers. Discrete
-  elimination does not touch the GPU, and [`ocbf.backends.gtsam_backend`][ocbf.backends.gtsam_backend] reports the two
-  facts separately for exactly this reason.
-* **Optional.** Nothing in the pipeline calls this. It is imported lazily, and a machine
-  without GTSAM loses a check, not a capability.
+Converts ``FactorGraph`` tables to GTSAM to compare marginals with numerical message
+passing and small enumeration references. This utility returns marginals and optional MPE;
+it does not expose the canonical normalizer/joint-conditional contract. For that contract,
+use ``inference.adapters.exact.ExactEngine``. Native loading uses ``ocbf.backends``.
 """
 
 from __future__ import annotations
@@ -302,8 +284,15 @@ def _elimination_cost(dfg, cardinalities: np.ndarray, gtsam) -> EliminationCost:
 
 def _potentials(log_table: np.ndarray) -> list[float]:
     """Log-potentials to the flat, non-negative, max-shifted list GTSAM wants."""
-    shifted = log_table - log_table.max()
-    return np.exp(shifted).ravel(order="C").tolist()
+    from ocbf.errors import IncompatibleModel, NumericalFailure
+    if np.isnan(log_table).any() or np.isposinf(log_table).any():
+        raise NumericalFailure("nonfinite discrete graph factor")
+    support = log_table > NEG_INF
+    if not support.any():
+        raise IncompatibleModel("discrete graph factor has no supported states")
+    shifted = log_table - log_table[support].max()
+    potentials = np.where(support, np.exp(shifted), 0.0)
+    return potentials.ravel(order="C").tolist()
 
 
 def exact_marginals(graph: FactorGraph, config: ExactConfig | None = None) -> ExactResult:
@@ -336,7 +325,10 @@ def exact_marginals(graph: FactorGraph, config: ExactConfig | None = None) -> Ex
             continue
         probs = np.asarray(marginals.marginalProbabilities((var, c)), dtype=np.float64).ravel()
         total = probs.sum()
-        probs = probs / total if total > 0 else np.full(c, 1.0 / c)
+        if not np.isfinite(probs).all() or (probs < 0).any() or not np.isfinite(total) or total <= 0:
+            from ocbf.errors import NumericalFailure
+            raise NumericalFailure("invalid exact marginal normalization", key=str(graph.registry.ref(var)))
+        probs = probs / total
         # Back to log space with the graph's own floor, so an impossible state reads as
         # NEG_INF here exactly as it does everywhere else rather than as -inf.
         with np.errstate(divide="ignore"):
@@ -366,9 +358,9 @@ def compare_to_exact(
 ) -> OracleComparison:
     """Measure an approximate posterior against the exact one on the same graph.
 
-    This is what the oracle is *for*. BP is exact on trees and an approximation on
-    everything else, and the size of that approximation is a number the design record asks
-    for rather than a thing to assume is small.
+    Compare BP's normalized marginal beliefs with exact marginals on the same supported
+    graph. Tree structure supports exact BP marginals; loopy graphs need an empirical
+    error assessment even when iteration residuals are small.
 
     Args:
         graph: the graph both posteriors are over.

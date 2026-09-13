@@ -1,16 +1,7 @@
-"""Point aggregation of continuous claims -- the bar the continuous layer must clear.
+"""Independent continuous aggregation baselines with explicit reported uncertainty.
 
-Design doc section 8.3 makes a baseline mandatory and always-reported, and the argument is
-no weaker on the continuous side than on the binary one. If fusing timestamps through a
-copula, a conditional-Gaussian coupling and a truncation factor does not beat taking the
-median of what the sources said, the machinery is not earning its place.
-
-Both estimators here return a full [`BeliefState`][ocbf.belief.state.BeliefState] rather than
-a bare number, so the comparison is on the same footing as the engine's: a method that
-cannot state its uncertainty cannot be scored on calibration, and calibration is where
-Stage 1 section 3.2 says the value actually is. The uncertainty they state is the honest one
-available to an aggregator -- the spread of the claims themselves, falling back to the pooled
-channel scale where a single witness leaves no spread to measure.
+Compare these summaries with supplied ground truth through ``ocbf.eval``. Their intervals
+express each estimator's assumptions; they are not coherent joint process histories.
 """
 
 from __future__ import annotations

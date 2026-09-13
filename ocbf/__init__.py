@@ -1,17 +1,9 @@
-"""OCBF -- Object-Centric Belief Fusion.
+"""OCBF — Object-Centric Belief Fusion.
 
-A joint probabilistic belief over a latent OCEL 2.0 log, fused from many sparse,
-individually unreliable, structurally-typed sources.
-
-Sources are sparse, weak and numerous, and that regime — not the OCEL format — drives the
-design. Most assertions cannot be decided by voting at all, so the schema's structure
-carries the inference; and most sources make too few claims to be assessed individually, so
-their reliability is pooled.
-
-The documentation is organised as Getting started, How-to guides, Explanation and API
-reference. `docs/explanation/research-notes.md` holds the literature and formal grounding;
-`docs/explanation/design-record.md` holds the committed model and the findings that revised
-it.
+Build explicit probability models from versioned evidence under a fixed semantic context,
+then evaluate process questions through declared posterior capabilities. The application
+facade lives in ``ocbf.api``; semantic types are also exported here. Source interpretation,
+manual parameters, model compilation, inference and query evaluation have separate owners.
 """
 
 __version__ = "0.1.0"

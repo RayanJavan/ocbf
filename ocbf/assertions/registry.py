@@ -1,18 +1,8 @@
-"""Contiguous integer indexing over the latent world.
+"""Dense execution storage for stable semantic assertion references.
 
-[`AssertionRef`][ocbf.assertions.refs.AssertionRef] is the address; this is the storage. At the scale of design doc
-section 1.3 (1e5-1e7 latent variables) every hot path -- message passing, marginal
-extraction, diagnostics -- must work on numpy arrays rather than Python objects, so the
-registry maintains parallel arrays keyed by a dense integer id.
-
-Two invariants the rest of the system relies on:
-
-1. **Ids are assigned in insertion order and never change.** Belief vectors, message
-   tensors and attribution matrices are all indexed by id.
-2. **Variables of one family occupy a contiguous, sorted id block once**
-   [`VariableRegistry.freeze`][ocbf.assertions.registry.VariableRegistry.freeze] **has run.** Templated batched message passing
-   (design doc section 2.1) slices by family, and a contiguous slice is free where a
-   fancy-index is not.
+``AssertionRef`` addresses meanings; ``VariableRegistry`` allocates contiguous indices and
+cardinalities for numerical arrays. Indices are local to a registry and must not be used as
+persistent evidence identifiers. Freeze a completed registry before numerical execution.
 """
 
 from __future__ import annotations
@@ -25,13 +15,7 @@ import numpy as np
 from ocbf.assertions.refs import AssertionRef, Family
 
 NA_STATE = 0
-"""Reserved state index for the ``NA`` ("attribute does not apply") value.
-
-Because ``T_e`` is latent, whether an event attribute is in-domain is itself uncertain, so
-the gate of design doc section 2.2 cannot be resolved at grounding time. Giving every
-attribute variable an explicit ``NA`` state at index 0 turns it into a clean deterministic
-factor instead of a variable-existence problem.
-"""
+"""Reserved index for an inapplicable discrete attribute. A selected event type can make an attribute outside its domain; this is distinct from an unknown value."""
 
 
 class VarKind(str, Enum):
@@ -194,12 +178,7 @@ class VariableRegistry:
             raise KeyError(f"{ref} is not registered") from None
 
     def get(self, ref: AssertionRef, default: int | None = None) -> int | None:
-        """Id of ``ref``, or ``default``.
-
-        Returns ``None`` for pruned assertions, which is how callers distinguish "not in
-        the active graph" (answer with the structural prior, per design doc section 2.3)
-        from "does not exist".
-        """
+        """Return the execution index of ``ref``, or ``default`` when it is absent. Absence from this registry does not establish that an assertion is false."""
         return self._index.get(ref, default)
 
     def ref(self, idx: int) -> AssertionRef:

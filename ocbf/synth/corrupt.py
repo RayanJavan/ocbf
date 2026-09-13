@@ -1,23 +1,8 @@
-"""Source simulation: reproducing the sparse / unreliable / numerous regime.
+"""Generate sparse, noisy static claims from explicitly synthetic process truth.
 
-Design doc section 8.2. Every axis of Stage 1 section 4.7 gets an independent knob, because
-the whole point of the evaluation is to sweep them and find where the model stops working:
-
-* ``deg(a)`` -- sources per assertion, controlling decidability;
-* ``deg(s)`` -- assertions per source, drawn long-tailed, controlling how hard pooling has
-  to work;
-* accuracy -- barely-above-chance upward;
-* **copy structure** -- within-cluster copying, which is what the effective-sample-size
-  diagnostic exists to catch;
-* coverage semantics, including a deliberately mis-declared one;
-* specialisation -- sources strong on one assertion family and weak on others.
-
-Source scopes are deliberately **localised** (a contiguous window over the sorted assertion
-pool) rather than uniform random subsets. Real sparse sources look at a region -- a time
-window, one object type, one sensor's neighbourhood -- and that locality is precisely what
-produces the thin, islanded overlap graph that the identifiability diagnostic of design doc
-section 7.1 is meant to detect. A uniform-random scope would manufacture an artificially
-well-connected overlap graph and hide the failure mode.
+Regime settings control source coverage, error, copying, specialization and continuous
+noise. Declared source clusters can share generated errors. These fixtures support
+controlled evaluation and do not calibrate observation channels on real records.
 """
 
 from __future__ import annotations
@@ -77,9 +62,8 @@ class SourceRegime:
     sensors are somewhere. Several cameras watch the packing station; nobody watches the
     space of links that never happen. Hotspots are anchored on *true* assertions, which
     gives realistic overlap: regions covered by several sources and regions covered by
-    none. That islanded structure is exactly what the identifiability diagnostic of design
-    doc section 7.1 must detect, and a uniform scope would manufacture an artificially
-    well-connected overlap graph that hides the failure mode.
+    none. Overlap diagnostics expose that disconnected structure; a uniform scope would
+    manufacture a well-connected overlap graph that hides isolated source groups.
 
     Lower means more concentration and higher ``deg(a)``; raise it to sweep toward the
     undecidable extreme.
@@ -104,11 +88,7 @@ class SourceRegime:
     )
 
     misdeclared_coverage_rate: float = 0.0
-    """Fraction of sources whose declared coverage differs from their true behaviour.
-
-    Used to test whether fitting ``gamma_s`` detects a mis-declaration (design doc
-    section 5.2).
-    """
+    """Fraction of synthetic source coverage declarations intentionally mismatched to their generated behavior."""
 
     families: tuple[Family, ...] = _DEFAULT_FAMILIES
     time_bias_sd: float = 2.0
@@ -508,12 +488,7 @@ def _observe_continuous(
     rng: np.random.Generator,
     scales: Mapping[str, tuple[float, float]],
 ) -> Claim | None:
-    """``y = v + bias_s + eps`` with Student-t noise -- design doc section 5.1's channel.
-
-    Student-t rather than Gaussian because unreliable sources produce gross outliers, and a
-    benchmark whose noise was Gaussian would never test the robustness the channel is chosen
-    for.
-    """
+    """Sample synthetic continuous reports with supplied bias and Student-t noise. Planted values are ground truth for numerical experiments only."""
     if isinstance(actual, bool) or not isinstance(actual, (int, float)):
         return None
     bias_scale, noise_scale = scales.get(marginal_key(ref), (0.0, 1.0))

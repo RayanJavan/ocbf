@@ -1,26 +1,6 @@
-"""Gaussian factor graph container and bank protocol -- the continuous layer's `graph`.
+"""Gaussian numerical graph and factor-bank protocol.
 
-The deliberate counterpart of [`ocbf.model.graph`][ocbf.model.graph]. Everything about the
-shape is the same, so the two engines read as one system: a graph owns variables and banks,
-a bank owns edges, and the engine hands a bank the incoming messages for its own edges and
-gets the outgoing ones back. Only the *contents* of a message differ.
-
-**Messages are natural parameters, not log-potential rows.** A Gaussian message carries
-``(precision, potential) = (1/v, m/v)``, so an edge message is two numbers rather than
-``max_card``. Natural parameters rather than ``(mean, variance)`` for the same reason the
-discrete engine works in log space: the combination rule is addition. A variable's belief is
-the sum of its incoming messages and its prior, and a cavity is that sum minus one term --
-both exact, both one subtraction, and neither needing a division or a special case.
-
-**The prior is the standard normal, by construction.** The copula transform of design doc
-section 4.1 defines the latent coordinate as ``z = Phi^-1(F(v))``, whose marginal *is*
-``N(0, 1)``. So the prior is not a modelling choice here; it is what makes the coordinate
-mean what it says. Everything informative enters as a bank.
-
-That standardisation has a practical consequence the engine leans on: a residual, a
-tolerance or a variance expressed in latent units means the same thing for a timestamp in
-hours and a price in euros. One convergence tolerance is meaningful across the whole block.
-"""
+Natural parameters store precision and precision-weighted mean. Numerical workspaces are separate from canonical model contracts. Copula coordinates have a standard-normal prior unless the caller supplies another admitted proper prior."""
 
 from __future__ import annotations
 
@@ -64,17 +44,9 @@ conversion finite instead of producing a zero-variance belief that no later mess
 
 @runtime_checkable
 class GaussianBank(Protocol):
-    """All groundings of one continuous factor template, stored columnar.
+    """Protocol for columnar continuous factor banks.
 
-    A bank owns ``n_edges`` edges. Edge ``e`` attaches to the block position
-    ``edge_vars()[e]``. The engine hands over the cavity -- the belief with this edge's own
-    message removed -- and receives the site approximation back.
-
-    Sites are expectation-propagation approximations for the non-Gaussian banks and exact
-    messages for the Gaussian ones, and the protocol deliberately does not distinguish them:
-    design doc section 4.3's whole point is that a copula warp, an interval censoring, a
-    truncation and a discrete mixture are one operation seen four ways.
-    """
+    Each edge attaches to a Gaussian-block position. Banks map cavity natural parameters to site messages, preserving the graph's precision/potential convention. A non-Gaussian bank may use moment matching under its declared approximation."""
 
     name: str
 
@@ -226,18 +198,9 @@ def site_from_moments(
     tilted_var: np.ndarray,
     cavity: np.ndarray,
 ) -> np.ndarray:
-    """The expectation-propagation site update: matched moments minus the cavity.
+    """Construct an EP site from matched moments minus cavity natural parameters.
 
-    This is the single line every non-Gaussian bank in the layer ends on, and it is what
-    design doc section 4.3's "compute the exact tilted moments, project back to a Gaussian,
-    propagate" means operationally. A site's job is to carry only what the factor adds to
-    the cavity, so the cavity is subtracted back off in natural parameters.
-
-    The result may carry a negative precision. That is not an error -- a factor can make a
-    variable *less* certain than the cavity -- and it is left to
-    [`ocbf.inference.gabp_ep`][ocbf.inference.gabp_ep] to decide whether the resulting belief
-    stays proper, because only the engine can see the other sites.
-    """
+    The caller is responsible for checking that the moments and resulting numerical state satisfy the engine's precision contract."""
     tilted = to_natural(tilted_mean, tilted_var)
     return tilted - cavity
 

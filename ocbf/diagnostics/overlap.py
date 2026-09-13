@@ -1,19 +1,8 @@
-"""The source overlap graph, and whether reliability is identifiable on it.
+"""Overlap-graph diagnostics for static binary source identifiability.
 
-Two results from the sparse-crowdsourcing literature make this a *checkable precondition*
-rather than a modelling assumption (Stage 1 section 4.1):
-
-* single-coin worker skills are asymptotically identifiable **iff** the limiting
-  interaction graph is irreducible and contains an **odd cycle** (arXiv:1706.06660);
-* equivalently, viewing skill estimation as rank-one correlation-matrix completion, skills
-  are recoverable **iff the sampling pattern has no bipartite connected component**
-  (arXiv:1904.11608).
-
-"Contains an odd cycle" and "is not bipartite" are the same statement, so the test is a
-two-colouring BFS in ``O(V+E)``. With sparse sources a real deployment easily produces an
-overlap graph that splits into islands, and a bipartite island silently admits the mirror
-solution in which every reliability is inverted and every truth flipped. Detecting that and
-saying so is strictly better than returning a confident inversion.
+The graph records which sources overlap on assertions. Bipartite or isolated components
+cannot resolve the orientation of the binary agreement model without additional
+assumptions. The diagnostic concerns that model, not arbitrary observation channels.
 """
 
 from __future__ import annotations
@@ -40,8 +29,7 @@ class Identifiability(str, Enum):
     better-than-chance prior picks a branch; the data does not."""
 
     PRIOR_ONLY = "prior_only"
-    """Too little overlap to be estimated at all. Its reliability comes from the
-    hierarchical prior -- the feature and cluster terms of the GLM -- not from its claims."""
+    """Insufficient static-source overlap to estimate reliability. Any assigned quality remains an explicit assumption."""
 
 
 @dataclass(slots=True)
@@ -104,7 +92,7 @@ class OverlapReport:
         if not self.is_globally_identifiable:
             lines.append(
                 "  -> Not globally identifiable. Reliabilities are comparable across "
-                "components only through the hierarchical prior."
+                "components only under additional shared assumptions."
             )
         return "\n".join(lines)
 

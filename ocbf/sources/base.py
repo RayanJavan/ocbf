@@ -12,31 +12,19 @@ from ocbf.sources.claims import Claim
 
 
 class CoverageSemantics(str, Enum):
-    """What a source's silence means.
+    """Static-source reporting declaration.
 
-    Design doc section 5.2 shows these are one family, not three unrelated modes:
-
-    ```text
-    pi_s(a) = sigmoid( w_s . f(a) + gamma_s * truth(a) )
-    ```
-
-    with ``gamma_s = 0`` recovering ``OPPORTUNISTIC`` and ``gamma_s -> inf`` recovering
-    ``COMPLETE_OVER_SCOPE``. So ``SELECTIVE`` with a fitted ``gamma_s`` is the general
-    case, and a *mis-declared* mode is detectable by fitting ``gamma_s`` and comparing.
-    """
+    Opportunistic reports do not imply negative silence. Complete or selective reporting requires a justified observation-opportunity and selection model before silence can enter a likelihood. The enum itself does not supply that model."""
 
     OPPORTUNISTIC = "opportunistic"
     """Silence is uninformative: the propensity does not depend on the truth, so it
     factorises out of the likelihood entirely."""
 
     COMPLETE_OVER_SCOPE = "complete_over_scope"
-    """Silence inside the declared scope is a full negative claim, contributing
-    ``log(1 - alpha_s)`` or ``log(beta_s)``. This is where a detector's false-negative
-    rate does its work -- treating its silence as "no information" throws away the
-    strongest signal it carries."""
+    """Declared complete reporting within a supplied scope. Negative silence still requires verified observation opportunities and an admitted observation model."""
 
     SELECTIVE = "selective"
-    """Silence is informative through an explicit propensity model. The general case."""
+    """Declared selective reporting. This enum does not fit or supply a selection-propensity model."""
 
     @property
     def silence_is_evidence(self) -> bool:
@@ -51,20 +39,13 @@ class ChannelFamily(str, Enum):
     under ``COMPLETE_OVER_SCOPE``, ``beta_s`` is what silence means."""
 
     CATEGORICAL = "categorical"
-    """One-parameter spread model ``rho_s`` with the off-diagonal confusion profile shared
-    across the source cluster. A per-source ``K x K`` confusion matrix is exactly the
-    parameterisation the sparse regime forbids (design doc section 5.1)."""
+    """Declared static categorical channel; concrete confusion probabilities must be supplied by the consumer."""
 
     CONTINUOUS = "continuous"
-    """``y = v + bias_s + eps``, ``eps ~ StudentT(nu_s, sigma_s)``. Student-t rather than
-    Gaussian for robustness to the gross outliers unreliable sources produce; as a scale
-    mixture of normals it stays conditionally Gaussian and so composes with the single
-    moment-matching mechanism of design doc section 4.3."""
+    """Declared continuous static report family. Consumers supply units and an observation-error model."""
 
     DISTRIBUTIONAL = "distributional"
-    """The source emits a distribution, consumed as ``lambda_s * log q_s(v)``. The
-    ``lambda_s`` calibration temperature is where "calibrated marginals" is actually
-    enforced, and it is the cheapest high-value parameter in the model."""
+    """Declared distributional report. Its upstream prior and interpretation must be established before it can be used as a likelihood."""
 
     @classmethod
     def for_family(cls, family: Family) -> ChannelFamily:
@@ -80,14 +61,9 @@ class ChannelFamily(str, Enum):
 
 @dataclass(frozen=True, slots=True)
 class SourceProfile:
-    """Everything the reliability model needs to know about a source *before* seeing data.
+    """Declared static-source metadata for simulation and diagnostics.
 
-    ``features`` feeds ``beta_feat`` in the hierarchical GLM -- the SLiMFast idea of
-    regressing accuracy on observable source properties (modality, vendor, model version,
-    placement, sampling rate, latency). It turns ``|S|`` free parameters into ``d << |S|``
-    and generalises to sources never seen before, which at 1e5 sources is the difference
-    between a fittable model and an unfittable one.
-    """
+    Features, family and coverage describe supplied assumptions. They are not fitted here and do not establish independent errors, calibrated trust or observed coverage."""
 
     source_id: str
     coverage: CoverageSemantics

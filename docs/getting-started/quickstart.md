@@ -1,185 +1,164 @@
-# Quickstart
+# Your first assessment
 
-Build a synthetic object-centric world, corrupt it into hundreds of weak sources, fuse them
-back into a belief, and check the answer against ground truth.
+Assess one synthetic Operation with a reported start and two possible end associations.
+The question is whether its duration exceeds a supplied 30-minute reference. Occurrence
+and association remain uncertain; endpoint times are fixed inputs.
 
-Every output below is from an actual run at `seed=3`, so you can compare yours line by line.
+The complete executable source is `examples/fixed_parameters.py`. The source excerpts
+below are included directly from that file.
 
-!!! info "Why start with synthetic data"
+## 1. Run the complete example
 
-    Ground truth is the only way to measure **calibration**, and calibration is where fusion
-    actually pays. The generator is a first-class part of the library for that reason, not a
-    testing convenience.
+After [installation](installation.md), run:
 
-## 1. Generate a world
+```bash
+python -m examples.fixed_parameters
+```
+
+It prints nominal, correction, and retraction estimates and writes bundles and a report
+under `artifacts/fixed-parameters`. The command explicitly selects the core
+`reference_elimination` engine.
+
+!!! note "Synthetic inputs"
+
+    Reports, identities, times, trust values, and the duration reference are supplied
+    demonstration inputs. The calculation validates numerical mechanics, not factory accuracy.
+    See [capabilities and limitations](../reference/capabilities.md).
+
+## 2. Supply the semantic context
+
+The fixture declares event/object types and a qualified relation, then instantiates three
+candidate events for one Operation. A candidate is a possible occurrence, not an observation.
 
 ```python
-from ocbf.synth import ProcessConfig, simulate_process
-
-gt = simulate_process(ProcessConfig(n_orders=25, seed=3))
-print(gt.summary())
+--8<-- "examples/fixed_parameters.py:context"
 ```
 
-```text
-{'events': 216, 'objects': 113, 'e2o': 442, 'o2o': 99, 'n_ConfirmOrder': 23,
- 'n_Invoice': 19, 'n_PackItem': 57, 'n_Pay': 13, 'n_PickItem': 57,
- 'n_PlaceOrder': 25, 'n_Ship': 22}
-```
+The snippets inside `example_inputs` share the imports and the fixed UTC constant at the
+top of the executable file. They are source excerpts; run the complete module rather than
+pasting individual function fragments into a fresh interpreter.
 
-This is an order-to-cash process where a single `Ship` event links one order and *several*
-items. That many-to-many joint is what makes the log genuinely object-centric — no single
-case notion covers both the order and the item perspective without duplication.
+## 3. Interpret versioned reports
 
-## 2. Ground a candidate universe
-
-The truth is not handed to the model. Instead we build a *candidate* universe: the real
-events plus decoys that never happened, each with a latent type support wider than its
-truth, and a loose time bracket.
+Each report has a source, producer version, stable record identity, revision identity,
+knowledge time, and explicit synthetic provenance.
 
 ```python
-universe = gt.build_universe()
-print(universe.prune_report.summary())
+--8<-- "examples/fixed_parameters.py:evidence"
 ```
 
-```text
-{'e2o_naive': 122040, 'e2o_after_signature': 47187, 'e2o_after_temporal': 26917,
- 'e2o_reduction': 0.779441, 'o2o_naive': 38307, 'o2o_after_signature': 170}
-```
+The supplied `SyntheticInterpreter` maps a positive endpoint report to a conjunction:
+the candidate event exists and is linked to this Operation. Inspect its definition to see
+exactly which assertions one report concerns.
 
-Naive E2O grounding would enumerate 122 040 candidate links. The qualifier-signature and
-temporal prunes cut that by 78 %, leaving 26 917 — and 28 010 latent variables in total.
+??? example "The complete fixture interpreter"
 
-## 3. Corrupt it into sources
+    ```python
+    --8<-- "examples/fixed_parameters.py:interpreter"
+    ```
+
+Interpretation and likelihood construction are separate. In a real integration, inspect
+admission issues before accepting observations. See [interpret evidence](../how-to/interpret-evidence.md).
+
+## 4. Resolve manual trust and model assumptions
+
+The example supplies all needed Boolean priors, classifies catalogue multiplicities, and
+declares the independence assumption between distinct information groups. It resolves two
+named binary-channel settings.
 
 ```python
-from ocbf.synth import SourceRegime, simulate_sources
-from ocbf.sources import ClaimSet
-
-sim = simulate_sources(universe, gt, SourceRegime(n_sources=300, n_hotspots=10, seed=3))
-claims = ClaimSet.from_sources(sim.sources)
-print(claims.summary())
+--8<-- "examples/fixed_parameters.py:parameters"
 ```
 
-```text
-{'claims': 2705, 'sources': 232, 'assertions_touched': 1281, 'density': 0.00910186,
- 'deg_a_mean': 2.112, 'deg_a_median': 1, 'deg_a_max': 11,
- 'deg_s_mean': 11.659, 'deg_s_median': 8, 'deg_s_max': 237}
-```
+These settings are assumptions held fixed during inference; comparing named settings is
+[assumption sensitivity](../concepts/parameters.md#assumption-sensitivity), not a credible
+interval. The [trust guide](../how-to/configure-trust.md) shows resolution and comparison.
 
-Read those numbers — they *are* the regime:
+## 5. Define support and process questions
 
-- `density: 0.009` — sources touch under 1 % of the assertions they could.
-- `deg_a_median: 1` — the median assertion has **one** source speaking about it.
-- `deg_s_median: 8` — the median source makes eight claims, far too few to estimate its own
-  accuracy.
+The model permits at most one end association. Its decoding binds the fixed endpoint times.
 
-94 of the 300 sources are copiers that duplicate a cluster-mate rather than observing
-independently, so their agreement is spurious by construction.
+??? example "Model specification"
 
-## 4. Fuse
+    ```python
+    --8<-- "examples/fixed_parameters.py:model"
+    ```
+
+The query projection supplies start/end alternatives, a population, a time window, and the
+separate normative duration reference. It also defines an expected exception count and
+descriptive overlap with a supplied condition interval.
+
+??? example "Query definitions"
+
+    ```python
+    --8<-- "examples/fixed_parameters.py:queries"
+    ```
+
+## 6. Compile, infer, and evaluate
+
+This complete interactive block uses the executable fixture to supply every input:
 
 ```python
-from ocbf.pipeline import fuse, FusionConfig
-from ocbf.inference import BPConfig
+from examples.fixed_parameters import example_inputs
+from ocbf.api import compile_model, evaluate, infer, requirements_for
+from ocbf.inference.contracts import InferencePolicy
 
-result = fuse(
-    universe,
-    sim.sources,
-    FusionConfig(outer_iterations=2, bp=BPConfig(max_iter=150)),
+spec, queries, settings, records = example_inputs()
+print("admission issues:", spec.evidence.issues)
+print("interpreted observations:", len(spec.evidence.observations))
+print("resolved parameters:", spec.parameters.parameter_id)
+model = compile_model(spec)
+result = infer(
+    model,
+    requirements=requirements_for(queries),
+    policy=InferencePolicy(engine="reference_elimination"),
 )
-print(result.report())
+answers = evaluate(result, queries)
+
+for estimate in answers.estimates:
+    print(estimate.name, estimate.value, estimate.unit, estimate.denominator)
+    print(estimate.status, estimate.computation, estimate.qualifications)
 ```
+
+Running the block prints the deterministic estimates:
 
 ```text
-Source overlap graph: 189 sources, 728 edges, 26 components (largest 74).
-  identified         174  reliability estimable from co-claims
-  sign_ambiguous       0  bipartite component: sign fixed by prior, not data
-  prior_only          15  insufficient overlap: reliability is assumed
-  -> Not globally identifiable. Reliabilities are comparable across components
-     only through the hierarchical prior.
-
-Effective sample size: {'deg_mean': 2.112, 'ess_mean': 1.606, 'deflation_mean': 0.8824,
-                        'clusters': 5, 'rho_mean': 0.7227}
-Decidability:          {'decidable': 32, 'undecidable': 1249,
-                        'decidable_fraction': 0.025, 'target_nats': 2.3026}
+admission issues: ()
+interpreted observations: 3
+resolved parameters: parameters:e8b04d4e908b047f6e608422e4b7597485e55672c2f652c4260053209ce0030e
+duration 0.5 probability 0.6282608695652174
+assessed exact-on-finite-model ('Conditional on declared candidate support, time model and evidence coverage.', 'Missing endpoints and unresolved associations are not zero durations.', 'Configured reference is a query input, not an observed production standard.')
+count 0.3141304347826087 executions 0.6282608695652174
+assessed exact-on-finite-model ('Conditional on declared candidate support, time model and evidence coverage.', 'Missing endpoints and unresolved associations are not zero durations.', 'Configured reference is a query input, not an observed production standard.')
+tracking overlap 7.5 minutes 0.6282608695652174
+assessed exact-on-finite-model ('Conditional on declared candidate support, time model and evidence coverage.', 'Missing endpoints and unresolved associations are not zero durations.', 'Configured reference is a query input, not an observed production standard.', 'Descriptive overlap is not causal delay or ready-to-work waiting.')
 ```
 
-Three findings worth pausing on, because they are the diagnostics doing their job:
+Each estimate prints its name, value, unit, and denominator on the first line, then its
+status, computation label, and qualifications on the second. The `duration` estimate is a
+conditional probability whose denominator is the applicable, evaluable execution mass, and
+the qualifications state the conditions under which the number holds.
 
-- **26 overlap components** and 15 prior-only sources — reliability is *not* globally
-  identifiable, and the report says so instead of quietly assuming otherwise.
-- **ESS 1.61 against degree 2.11** — the copy structure was detected (within-cluster
-  residual correlation ≈ 0.72) and the evidence deflated accordingly.
-- **2.5 % decidable** — under 40 of 1281 assertions carry enough source evidence for *any*
-  aggregation rule to decide them. Everything else rests on the structural prior.
+A missing or non-evaluable history contributes explicit outcome information. Read the
+denominator and qualifications alongside the value; see [result meanings](../reference/results.md).
 
-## 5. Query a belief
+## 7. Replay and revise
+
+The full command exports inputs before inference and checks their replay. Reproduce the
+nominal result from the recorded bundle:
 
 ```python
-from ocbf.assertions import Family
+from examples._shared.study import reproduce
 
-ref = next(r for r in result.claim_set.refs
-           if r.family is Family.E2O and result.belief.is_decidable(r))
-
-print(ref)                                  # e2o(ev_00022, order, order_16)
-print(result.belief.prob_true(ref))         # 0.0
-print(result.belief.verdict(ref).value)     # 'false'
-print(gt.truth(ref))                        # False  ← ground truth agrees
-print(result.belief.top_contributors(ref, 4))
+answers = reproduce("artifacts/fixed-parameters/nominal/inputs.json")
 ```
 
-```text
-[('channel:src_00097', -3.794),
- ('silence:src_00108', -3.468),
- ('channel:src_00171', -3.415),
- ('prior',             -3.178)]
-```
+The injected correction replaces an end report. The retraction withdraws that revision.
+Both create a new effective evidence state and a new calculation. Replaying identical
+scientific inputs preserves their identities and deterministic answers; run identity changes.
 
-Those numbers are additive contributions to the posterior **log-odds**, and they sum to the
-result. Note `silence:src_00108`: that source never mentioned this link, and because it
-declared `COMPLETE_OVER_SCOPE` coverage, its silence is a genuine negative claim worth −3.47
-nats.
-
-Attribution costs nothing extra — it is the belief-propagation messages, retained.
-
-## 6. Check against the baseline
-
-```python
-from ocbf.baselines import weighted_vote
-from ocbf.eval import compare
-
-sources = {s.profile.source_id: s for s in sim.sources}
-refs = [r for r in result.claim_set.refs
-        if r.family in (Family.E2O, Family.O2O, Family.EVENT_EXISTS)]
-
-print(compare(
-    {
-        "weighted_vote": weighted_vote(universe.registry, result.claim_set, sources=sources),
-        "ocbf": result.belief,
-    },
-    gt.truth_map(refs),
-    refs,
-))
-```
-
-| method | accuracy | AUC | Brier | ECE |
-| --- | --- | --- | --- | --- |
-| weighted vote | 0.8374 | 0.9280 | 0.1110 | 0.1339 |
-| **OCBF** | **0.9571** | **0.9817** | **0.0355** | **0.0266** |
-
-The calibration error is 5× lower. That is the headline result: not that the model ranks
-assertions better, but that its stated probabilities mean what they say.
-
-## What you just did
-
-You fused 2705 claims from 300 mostly-unreliable sources — where the median assertion had a
-single witness and only 2.5 % were decidable by voting — into a calibrated belief that beat
-the standard baseline on every metric. The structural prior did most of that work; see
-[The regime](../explanation/the-regime.md) for why that is not a lucky accident.
-
-## Next steps
-
-- **[Add your own source](../how-to/add-a-source.md)** — swap the simulator for real evidence.
-- **[Read the diagnostics](../how-to/read-diagnostics.md)** — what to do when a run reports
-  `sign_ambiguous` or near-zero decidability.
-- **[The model](../explanation/the-model.md)** — what those 86 838 factors actually are.
+Continue with [Concepts](../concepts/index.md) for the objects and behavior behind this
+assessment, then
+[evidence revisions](../how-to/revise-evidence.md),
+[inference selection](../how-to/choose-inference.md), or
+[repeated execution](../how-to/repeated-execution.md).

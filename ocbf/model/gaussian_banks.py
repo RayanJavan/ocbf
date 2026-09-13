@@ -1,26 +1,9 @@
-"""Gaussian factor banks: batched expectation propagation, one template at a time.
+"""Gaussian message-passing factor banks.
 
-The continuous counterpart of [`ocbf.model.banks`][ocbf.model.banks], and the place where
-design doc section 4.3's central economy is cashed in. That section observes that four
-apparently unrelated problems are one operation:
-
-| problem | non-Gaussian element | bank |
-| --- | --- | --- |
-| copula transform of a non-Gaussian marginal | monotone warp | [`ObservationBank`][ocbf.model.gaussian_banks.ObservationBank] |
-| ordinal / count observation | interval censoring | [`IntervalBank`][ocbf.model.gaussian_banks.IntervalBank] |
-| lifecycle precedence `tau_e < tau_e'` | truncation | [`PrecedenceBank`][ocbf.model.gaussian_banks.PrecedenceBank] |
-| conditional-Gaussian coupling to a discrete variable | Gaussian mixture | [`CGMeanBank`][ocbf.model.gaussian_banks.CGMeanBank] |
-
-Every one of them ends on the same two lines: compute the exact tilted moments, then call
-[`site_from_moments`][ocbf.model.gaussian.site_from_moments]. What differs between them is
-only *how the tilted moments are obtained* -- closed form where one exists, one-dimensional
-Gauss-Hermite quadrature where it does not. There is no fifth mechanism, and adding a new
-kind of continuous evidence means writing a tilted-moment computation, not an engine.
-
-Two banks are exactly Gaussian and need no projection at all
-([`GaussianEvidenceBank`][ocbf.model.gaussian_banks.GaussianEvidenceBank],
-[`CorrelationBank`][ocbf.model.gaussian_banks.CorrelationBank]); they satisfy the same
-protocol so the engine cannot tell the difference, which is the point.
+Banks share a cavity-to-site interface but implement different local likelihoods:
+Gaussian evidence, pairwise correlation, transformed observations, interval censoring,
+precedence and conditional-Gaussian mean coupling. Non-Gaussian sites use tilted moments;
+local moment matching does not preserve a general multimodal joint distribution.
 """
 
 from __future__ import annotations
@@ -43,23 +26,14 @@ from ocbf.model.gaussian import (
 DEFAULT_QUADRATURE = 64
 """Gauss-Hermite nodes used by the quadrature banks.
 
-Set by the Student-t channel, the layer's hardest integrand: Gauss-Hermite assumes
-Gaussian-weighted decay and a Student-t tail is polynomial. The count is chosen so the
-systematic error in the tilted moments sits *below*
-[`EPConfig.tol`][ocbf.inference.gabp_ep.EPConfig.tol]; above it, the engine would be chasing
-a fixed point finer than its integration could resolve. The two have to be chosen together
-(design record section 11.10).
+Quadrature error and [`EPConfig.tol`][ocbf.inference.gabp_ep.EPConfig.tol] must be assessed
+together. Heavy-tailed observation likelihoods can require more nodes than smooth Gaussian
+sites. Compare tilted moments with adaptive quadrature for the intended cavity and tail
+regime; the default node count is not a universal integration-error guarantee.
 """
 
 LogLikelihood = Callable[[np.ndarray], np.ndarray]
-"""``log p(y | v)`` evaluated on a ``(n_edges, n_nodes)`` grid of *observed-space* values.
-
-The seam that keeps [`ObservationBank`][ocbf.model.gaussian_banks.ObservationBank] general.
-Per-edge parameters are closed over and broadcast as ``(n_edges, 1)``, so a channel family
-is a function rather than a subclass -- which is what makes the distributional channel of
-design doc section 5.1 (``lambda_s * log q_s(v)``) a one-line addition rather than an engine
-change.
-"""
+"""Observed-unit log-likelihood callable. The bank supplies values through its marginal transform and integrates the returned log density against a cavity. Callers own the report's probability semantics."""
 
 
 def _quadrature_moments(
@@ -222,18 +196,9 @@ class CorrelationBank:
 
 
 class ObservationBank:
-    """A source's continuous claim, pushed through the copula's monotone warp.
+    """Observed-unit likelihood evaluated through a monotone copula transform.
 
-    Design doc section 5.1 gives the channel in *observed* space -- ``y = v + bias_s + eps``
-    with Student-t noise -- while the engine works in latent space. The two are related by
-    ``v = F^-1(Phi(z))``, which is nonlinear for every marginal except the affine one, so the
-    tilted distribution is not Gaussian and the site is obtained by moment matching. That is
-    design doc section 4.3's first row, and it is why an arbitrary marginal costs nothing
-    extra here: the warp is evaluated at the quadrature nodes like anything else.
-
-    One bank per template, in the par-factor sense: all its edges share a marginal, which is
-    what lets the warp be one vectorised call.
-    """
+    The likelihood receives values on the observed scale; quadrature integrates its product with the latent Gaussian cavity and moment-matches the resulting site. Quadrature resolution and moment matching are numerical approximations."""
 
     __slots__ = ("name", "_vars", "_loglik", "_marginal", "_nodes", "_weights", "labels")
 
@@ -269,17 +234,7 @@ class ObservationBank:
 
 
 class IntervalBank:
-    """Interval-censored evidence: ``z`` lies in ``[lo, hi]``.
-
-    Design doc section 4.3's second row, and the only bank whose tilted moments are closed
-    form -- a Gaussian restricted to an interval. It carries three quite different things
-    with one implementation, which is the argument for censoring being a primitive rather
-    than a special case:
-
-    * an ordinal, count or binary observation, whose level names a pair of cutpoints;
-    * the floor of a truncated marginal;
-    * a coarse bracket on a timestamp, of the kind the universe already uses to prune.
-    """
+    """Interval-censored evidence restricting a latent coordinate to ``[lo, hi]``. Tilted moments use the closed-form truncated-normal calculation before the EP site update."""
 
     __slots__ = ("name", "_vars", "_lo", "_hi", "labels")
 
@@ -316,20 +271,9 @@ class IntervalBank:
 
 
 class PrecedenceBank:
-    """Soft lifecycle precedence: ``z_before`` is expected to precede ``z_after``.
+    """Pairwise temporal-order evidence in latent coordinates.
 
-    Design doc section 3.3 states the factor as ``log sigmoid((tau' - tau) / s)`` with a
-    small slack ``s``, registered SOFT because processes deviate from their intended order.
-    Setting ``hard`` switches to a plain truncation, which is what the constraint register
-    does if a caller promotes precedence to a definitional rule.
-
-    The potential depends on the two coordinates only through their **difference**, and that
-    is what makes the site exact rather than another approximation. The cavity on the
-    difference is Gaussian, so the tilted moments are a one-dimensional quadrature; the
-    resulting site is then propagated back to each endpoint by the ordinary Gaussian
-    convolution. Under the affine marginal timestamps use, the latent difference is the
-    observed time difference up to a fixed scale, so the slack means exactly what it says.
-    """
+    The soft form uses a sigmoid preference with supplied scale and weight. The hard form uses truncated moments. Within EP, these local sites do not imply exact inference for a globally truncated joint distribution."""
 
     __slots__ = ("name", "_before", "_after", "_slack", "_weight", "_hard", "_nodes", "_weights")
 
@@ -402,23 +346,9 @@ class PrecedenceBank:
 
 
 class CGMeanBank:
-    """Conditional-Gaussian coupling: a discrete variable modulates a Gaussian mean.
+    """Conditional-Gaussian mean coupling to a finite variable.
 
-    Design doc section 4.2's homogeneous CG construction, ``Z | (discrete = d) ~ N(mu_d,
-    Sigma)`` -- mean modulation only, covariance shared across states. Restricting to
-    homogeneous CG is what keeps every message Gaussian with a discrete-indexed offset;
-    state-dependent covariance costs the closed form and is deferred.
-
-    The two directions are deliberately asymmetric, exactly as section 4.3 states:
-
-    * **To the discrete variable** the message is exact and closed form -- the Gaussian
-      log-partition per state, which is [`discrete_potentials`][ocbf.model.gaussian_banks.CGMeanBank.discrete_potentials].
-    * **To the continuous variable** the exact message is a *mixture* with one component per
-      state. It is collapsed by moment matching, which is a documented approximation and the
-      place a multimodal continuous posterior would be lost. [`mixture`][ocbf.model.gaussian_banks.CGMeanBank.mixture]
-      exposes the uncollapsed components so a small discrete support can be checked against
-      the collapse rather than trusted.
-    """
+    Components share covariance and differ by mean. The message to the continuous side is moment-matched, while optional uncollapsed components expose the local approximation. The discrete message retains its analytic log-partition contribution."""
 
     __slots__ = ("name", "_vars", "_means", "_log_weights", "_var", "labels")
 
@@ -465,12 +395,7 @@ class CGMeanBank:
         return _project(cavity, mixture_mean, mixture_var, valid)
 
     def mixture(self, cavity: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """The uncollapsed message: per-state ``(weight, mean, variance)``.
-
-        The mixture-retaining path design doc section 4.3 keeps for validation. Each
-        component is the cavity updated by one state's conditional Gaussian, weighted by how
-        well that state explains the cavity.
-        """
+        """Return retained uncollapsed ``(weights, means, variances)`` for a local conditional-Gaussian message. This is available only when the numerical calculation retained those components; it is not a general joint posterior."""
         cavity_precision = np.maximum(cavity[:, PRECISION], MIN_PRECISION)
         cavity_mean = cavity[:, POTENTIAL] / cavity_precision
         cavity_var = 1.0 / cavity_precision
@@ -514,12 +439,7 @@ class CGMeanBank:
 def gaussian_loglik(
     value: np.ndarray, scale: np.ndarray, bias: np.ndarray | float = 0.0
 ) -> LogLikelihood:
-    """``y = v + bias + eps`` with Gaussian ``eps``.
-
-    Present as the reference channel to check the Student-t one against, not as a
-    recommendation: design doc section 5.1 is explicit that a Gaussian channel is badly
-    misled by the gross outliers unreliable sources produce.
-    """
+    """Return the observed-unit Gaussian log likelihood for ``y = v + bias + noise`` with supplied scales. This is also a numerical comparison channel for robust error distributions."""
     y = np.asarray(value, dtype=np.float64)[:, None]
     s = np.asarray(scale, dtype=np.float64)[:, None]
     b = np.reshape(np.asarray(bias, dtype=np.float64), (-1, 1)) if np.ndim(bias) else float(bias)
@@ -533,16 +453,7 @@ def gaussian_loglik(
 def student_t_loglik(
     value: np.ndarray, scale: np.ndarray, df: np.ndarray | float, bias: np.ndarray | float = 0.0
 ) -> LogLikelihood:
-    """``y = v + bias_s + eps`` with ``eps ~ StudentT(nu_s, sigma_s)``.
-
-    The continuous channel of design doc section 5.1. Student-t rather than Gaussian for
-    robustness to the gross outliers unreliable sources produce: a single wild claim moves a
-    Gaussian channel's posterior in proportion to its distance, while a Student-t channel
-    discounts it as the tail explanation it probably is.
-
-    Normalising constants are dropped -- they do not depend on the latent value, so they
-    cancel in the tilted normalisation.
-    """
+    """Return the observed-unit Student-t log likelihood with supplied bias, positive scale and degrees of freedom. Heavy tails reduce the influence of large residuals under this error assumption."""
     y = np.asarray(value, dtype=np.float64)[:, None]
     s = np.asarray(scale, dtype=np.float64)[:, None]
     nu = np.asarray(df, dtype=np.float64)[:, None] if np.ndim(df) else float(df)
@@ -556,13 +467,9 @@ def student_t_loglik(
 
 
 def tempered_loglik(base: LogLikelihood, temperature: np.ndarray | float) -> LogLikelihood:
-    """Scale a channel's log-likelihood by a calibration temperature ``lambda_s``.
+    """Multiply an explicitly supplied log likelihood by a temperature.
 
-    Design doc section 5.1's distributional channel, ``log p(y | v) = lambda_s log q_s(v)``.
-    Below 1 the source is overconfident and its likelihood is flattened; above 1 it is
-    underconfident and sharpened. Wrapping rather than reimplementing keeps calibration
-    orthogonal to the channel family, which is what lets it apply to any of them.
-    """
+    The caller must establish its probability semantics; an arbitrary upstream posterior or confidence vector is not automatically a likelihood."""
     lam = np.asarray(temperature, dtype=np.float64)
     lam = lam[:, None] if lam.ndim else lam
 

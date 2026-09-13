@@ -1,17 +1,20 @@
 # How-to guides
 
-Task-oriented recipes. Each assumes you can already run OCBF — if not, start with the
-[Quickstart](../getting-started/quickstart.md).
+Each guide solves a task using the current contracts. Begin with the
+[quickstart](../getting-started/quickstart.md) if you need a complete fixture.
 
-| Guide | Answers |
-| --- | --- |
-| [Add your own source](add-a-source.md) | How do I feed real evidence in instead of the simulator? |
-| [Inspect a belief state](inspect-beliefs.md) | How do I get marginals, verdicts and attribution out? |
-| [Fuse timestamps and attributes](fuse-continuous.md) | How do I fuse the continuous layer, and check it? |
-| [Read the diagnostics](read-diagnostics.md) | What do I do when identifiability or decidability looks bad? |
-| [Configure constraints](configure-constraints.md) | How do I add schema rules, and which should be hard? |
-| [Benchmark against baselines](compare-baselines.md) | How do I prove the model is actually helping? |
+| Task | Guide |
+|---|---|
+| Admit source reports under explicit meaning | [Interpret evidence](interpret-evidence.md) |
+| Correct or retract reports at a knowledge cutoff | [Revise evidence](revise-evidence.md) |
+| Resolve parameters and compare assumptions | [Configure manual trust](configure-trust.md) |
+| Separate support, assumptions, and references | [Configure constraints](configure-constraints.md) |
+| Request the right posterior representation | [Choose inference](choose-inference.md) |
+| Work with shared uncertainty and sampled histories | [Use joint inference](joint-inference.md) |
+| Define process questions and read their qualifications | [Evaluate queries](evaluate-queries.md) |
+| Check numerical quality and evidence limits | [Read diagnostics](read-diagnostics.md) |
+| Reuse results and bound execution | [Use execution sessions](repeated-execution.md) |
+| Retain or exchange reproducible calculations | [Export and replay](export-replay.md) |
 
-These are deliberately not tutorials: they assume a goal and get to it. For the reasoning
-behind the choices they make, follow the links into
-[Explanation](../explanation/index.md).
+For a new interpreter, channel, engine, or evaluator, use the
+[extension guide](../development/extensions.md).

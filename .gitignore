@@ -1,5 +1,6 @@
 # Build output
 site/
+artifacts/
 *.egg-info/
 build/
 dist/
@@ -21,6 +22,8 @@ __pycache__/
 .coverage.*
 htmlcov/
 .hypothesis/
+output/playwright/
+.playwright-cli/
 
 # Editors and OS
 .vscode/

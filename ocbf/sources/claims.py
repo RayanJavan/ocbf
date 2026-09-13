@@ -1,9 +1,8 @@
-"""Claims and the indexed claim set.
+"""Static claims and their sparse source/assertion incidence structure.
 
-[`ClaimSet`][ocbf.sources.claims.ClaimSet] is the bipartite claim-incidence structure ``C ⊆ S x A`` of Stage 1
-section 1.2. Nearly every diagnostic reads it: the source overlap graph (section 7.1) is
-its projection onto sources, per-assertion decidability (7.2) needs ``deg(a)``, and
-effective sample size (7.3) needs the per-family breakdown of who covers what.
+These values support source diagnostics, synthetic generators and comparison methods.
+Soft reports and selection features are retained metadata; storing them does not define a
+likelihood. The evidence workflow requires an explicit interpreter and observation channel.
 """
 
 from __future__ import annotations
@@ -19,22 +18,9 @@ from ocbf.assertions import AssertionRef
 
 @dataclass(frozen=True, slots=True)
 class Claim:
-    """One source speaking about one assertion.
+    """One static source report about one assertion.
 
-    ``value`` is interpreted by the source's channel family:
-
-    * ``BINARY``        -- ``bool``
-    * ``CATEGORICAL``   -- ``str``, a level of the assertion's domain
-    * ``CONTINUOUS``    -- ``float``
-    * ``DISTRIBUTIONAL``-- ``value`` may be the argmax; ``soft`` carries the distribution
-
-    ``soft`` lets any channel attach a distribution rather than a point. It is the honest
-    representation for a learned detector, and it is what the ``lambda_s`` calibration
-    temperature acts on.
-
-    ``observed_features`` are per-claim covariates for the ``SELECTIVE`` propensity model
-    (``w_s . f(a)`` in design doc section 5.2) -- e.g. signal strength, distance to sensor.
-    """
+    ``value`` can carry a Boolean, category or continuous report according to its declared family. ``soft`` and ``observed_features`` preserve extra report metadata; their probability semantics require an explicit interpreter/channel. Static claim storage does not invent knowledge time or provenance."""
 
     source_id: str
     ref: AssertionRef
@@ -134,11 +120,7 @@ class ClaimSet:
         return len(self.sources_covering(ref))
 
     def deg_source(self, source_id: str) -> int:
-        """``deg(s)`` -- how many distinct assertions this source touches.
-
-        Small ``deg(s)`` is exactly why per-source MLE is hopeless and why the reliability
-        GLM pools (design doc section 5.3).
-        """
+        """Return the number of distinct assertions touched by this static source."""
         return len(self.refs_of_source(source_id))
 
     def assertion_degrees(self) -> dict[AssertionRef, int]:
@@ -148,7 +130,7 @@ class ClaimSet:
         return {sid: self.deg_source(sid) for sid in self._sources}
 
     def density(self) -> float:
-        """``|C| / (|S| x |A|)`` -- the sparsity figure of Stage 1 section 1.2."""
+        """Return static-claim incidence density ``|C| / (|S| * |A|)``."""
         denom = len(self._sources) * len(self._refs)
         return len(self._claims) / denom if denom else 0.0
 

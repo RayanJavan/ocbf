@@ -1,10 +1,9 @@
-"""A genuinely object-centric synthetic process, and its ground truth.
+"""Generate an object-centric order-to-cash process with retained synthetic truth.
 
-The point of "genuinely object-centric" (design doc section 8.1) is that events are
-**shared across objects** -- a single ``Ship`` event links one order and several items --
-rather than being a bundle of independent per-case traces. A generator that produced
-independent traces would let a flattened baseline look artificially good and would never
-exercise the cardinality or directly-follows machinery.
+Events can relate to several objects, including an order and multiple items. Optional
+attributes and planted dependence support controlled numerical experiments. The generated
+universe includes decoys and alternative event types so existence and association remain
+uncertain inputs to a model.
 """
 
 from __future__ import annotations
@@ -37,13 +36,7 @@ O2OKey = tuple[str, str, str]
 
 
 PRIORITY_LEVELS = ("low", "normal", "high")
-"""Ordered levels of the ``order_priority`` attribute.
-
-Ordered, so it belongs to the copula as an interval-censored coordinate rather than to the
-discrete layer. An *unordered* categorical would not, and the generator deliberately does
-not produce one: design doc section 4.2's boundary is a property of the model, and a
-benchmark that never crossed it would not be testing where the model stands.
-"""
+"""Ordered synthetic priority labels. Unordered nominal categories are excluded from copula transforms."""
 
 
 def order_process_schema(*, attributes: bool = False) -> Schema:
@@ -164,24 +157,13 @@ class ProcessConfig:
     """Half-width of the ``[time_lo, time_hi]`` bracket around the true timestamp."""
 
     attributes: bool = False
-    """Generate attribute values through a known latent Gaussian copula.
-
-    Design doc section 8.1 step 4. Sampling attributes *through* a copula rather than
-    independently is what makes the generator a test of the continuous layer instead of a
-    test of four scalar regressions: the fitted latent correlations have a known target to be
-    checked against.
-    """
+    """Generate synthetic attributes through a planted copula for numerical validation."""
 
     attribute_correlation: float = 0.6
     """True latent correlation between two attributes of the same object."""
 
     time_attribute_correlation: float = 0.5
-    """True latent correlation between an event attribute and its own event's timestamp.
-
-    The other structure design doc section 4.1 calls schema-given. Generating both means the
-    grounded precision pattern has something real to recover in each of the two places it is
-    allowed to be non-zero.
-    """
+    """Planted synthetic dependence between event times and event attributes."""
 
     p_type_known: float = 0.0
     """Fraction of candidate events whose activity label is certain.
@@ -257,13 +239,9 @@ class GroundTruth:
         return {r: self.truth(r) for r in refs}
 
     def build_universe(self, *, temporal_prune: bool = True) -> Universe:
-        """Ground a candidate universe around this truth.
+        """Build candidate support around synthetic truth.
 
-        Candidate events are the true events plus decoys; each gets a type support wider
-        than its truth and a loose time bracket. Objects are all real (identity is clamped
-        per Stage 1 decision 2) but their *existence* is still a latent variable, and O2O
-        candidates include non-existent pairs so link inference is non-trivial.
-        """
+        Include decoy events, alternative event types and loose time brackets. Object identity/type remain supplied, while existence and qualified links are represented as uncertain assertions."""
         rng = np.random.default_rng(self.config.seed + 9973)
         cfg = self.config
         all_types = list(self.schema.event_type_names)
@@ -359,20 +337,7 @@ def _sample_attributes(
     config: ProcessConfig,
     rng: np.random.Generator,
 ) -> dict[AssertionRef, float]:
-    """Attribute values drawn through a *known* latent Gaussian copula.
-
-    Design doc section 8.1 step 4. Two correlations are planted deliberately, one for each
-    structure design doc section 4.1 calls schema-given:
-
-    * ``order_value`` with ``order_units`` -- two attributes of the same object;
-    * ``order_priority`` and ``ship_delay_hours`` with their own event's timestamp.
-
-    Each attribute is then pushed through a different marginal -- lognormal, Poisson,
-    three-level ordinal, zero-inflated exponential -- so a run exercises all four
-    copula-eligible transforms and not four copies of the easy one. Because the latent draws
-    are what is correlated, the target the fitted copula must recover is known exactly rather
-    than estimated from the values afterwards.
-    """
+    """Sample synthetic attributes through a known latent Gaussian copula, retaining planted object and event dependence for numerical comparisons."""
     out: dict[AssertionRef, float] = {}
     rho_object = config.attribute_correlation
     rho_time = config.time_attribute_correlation
