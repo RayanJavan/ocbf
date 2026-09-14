@@ -1,8 +1,8 @@
 # Documentation hosting
 
-Read the Docs Community can host OCBF's public documentation. The repository supplies
-the build recipe; Read the Docs manages publication, previews, and version routing.
-Adding `.readthedocs.yaml` does not itself create or connect a hosted project.
+Read the Docs Community hosts OCBF's public documentation at
+[ocbf.readthedocs.io](https://ocbf.readthedocs.io/). The repository supplies the build
+recipe; Read the Docs manages publication, previews, and version routing.
 
 ## How the build is shared
 
@@ -35,41 +35,34 @@ Leave `DOCS_SITE_URL` unset in Read the Docs so its own version-aware URL takes 
 The publication checker loads the resolved MkDocs configuration too. Test URL changes
 with the [version-path check](validation.md#documentation-checks).
 
-## Connect Read the Docs Community
+## Project settings
 
-1. Merge the setup PR after GitHub's **Documentation build** and **Test suite (Python
-   3.12)** checks pass. The imported default branch must contain `.readthedocs.yaml` and
-   `requirements/docs.txt`.
-2. Confirm that the repository is public and has your intended open-source license.
-   [Community hosting](https://docs.readthedocs.com/platform/stable/choosing-a-site.html)
-   is intended for public open-source documentation.
-3. Sign in to [Read the Docs Community](https://app.readthedocs.org/). Install the
-   [Community GitHub App](https://github.com/apps/read-the-docs-community/installations/new/)
-   under `RayanJavan` and grant it access to `ocbf`. Community and Business have separate
-   accounts and Apps. The App manages events and preview integration; a repository PAT or
-   manual webhook is not part of this build setup.
-4. Choose **Projects → Add project**, select `RayanJavan/ocbf`, and import it. If the
-   repository is missing, check the App's repository access and refresh the repository
-   list. Set the default branch to `main`, configuration file to `.readthedocs.yaml`,
-   language to English, and initial default version to `latest`. Keep versioned hosting.
-5. Inspect the first build log. Confirm pinned installation, source/example checks,
-   strict MkDocs generation, and publication checks all succeed. Open **View docs** and
-   review the pages, search, API reference, diagrams, and source-edit links.
-6. Copy the actual hosted URL from **View docs** into the README and GitHub's
-   **About → Website** field. The project slug is assigned during import; do not assume
-   that `ocbf.readthedocs.io` is available.
+The project is connected through the
+[Read the Docs Community GitHub App](https://github.com/apps/read-the-docs-community),
+which delivers push and pull request events; no repository token or manual webhook is used.
 
-See the upstream [project import guide](https://docs.readthedocs.com/platform/stable/intro/add-project.html)
-and [Git integration reference](https://docs.readthedocs.com/platform/stable/reference/git-integration.html)
+| Setting | Value |
+|---|---|
+| Project slug | `ocbf` |
+| Repository and default branch | `RayanJavan/ocbf`, `main` |
+| Configuration file | `.readthedocs.yaml` at the repository root |
+| Language | English |
+| Versioning | Multiple versions; default version `latest` |
+| Pull request previews | Public |
+| GitHub **About → Website** | `ocbf.readthedocs.io` |
+
+Check a changed setting against the first build it affects: pinned installation,
+source/example checks, strict MkDocs generation, and publication checks must all succeed.
+See the upstream [Git integration reference](https://docs.readthedocs.com/platform/stable/reference/git-integration.html)
 for dashboard details.
 
 ## Previews and required checks
 
-In Read the Docs, enable **Settings → Pull request builds → Build pull requests for this
-project**. Open a documentation PR and verify a successful status and working preview.
-Push a new commit if the PR predates enabling previews. Treat Community previews as public.
+Pull request builds are controlled by **Settings → Pull request builds → Build pull
+requests for this project**. A PR opened before previews were enabled needs a new commit
+to receive one. Treat Community previews as public.
 
-Once the preview status has appeared, protect `main` with required PRs and successful
+Once the preview status has appeared on a PR, protect `main` with required PRs and successful
 checks: **Test suite (Python 3.12)**, **Documentation build**, and the exact Read the Docs
 status name observed on that PR. A sole maintainer can require PRs and checks without
 requiring another person's approval. Keep docs CI enabled for code and example changes

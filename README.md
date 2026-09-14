@@ -42,6 +42,9 @@ calculations under `artifacts/fixed-parameters`. No native solver or factory dat
 
 ## Learn and use
 
+Read the documentation at **[ocbf.readthedocs.io](https://ocbf.readthedocs.io/)**. The
+sources for each section are also readable in this repository:
+
 - [Overview](docs/overview/workflow.md): the workflow and where the library fits.
 - [Getting started](docs/getting-started/index.md): installation and a complete assessment.
 - [Concepts](docs/concepts/index.md): library objects, their behavior, and concrete examples.
@@ -66,6 +69,6 @@ For documentation, use the pinned environment and PowerShell or POSIX commands i
 [documentation maintenance](docs/development/documentation.md#documentation-environment).
 MkDocs, Material, and mkdocstrings build the guides and generated API reference together.
 CI checks that site separately from the library suite and uploads the `ocbf-site` artifact.
-The [hosting guide](docs/development/hosting.md) describes how to connect this same build
-to Read the Docs Community. See the [development guide](docs/development/index.md) for
+Read the Docs publishes the same build; the [hosting guide](docs/development/hosting.md)
+records its settings. See the [development guide](docs/development/index.md) for
 validation and contribution rules.

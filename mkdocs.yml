@@ -7,12 +7,17 @@ site_url: !ENV [DOCS_SITE_URL, READTHEDOCS_CANONICAL_URL, "http://127.0.0.1:8000
 repo_url: https://github.com/RayanJavan/ocbf
 repo_name: RayanJavan/ocbf
 edit_uri: edit/main/docs/
+strict: true
 validation:
   nav:
     omitted_files: warn
-  links:
-    anchors: warn
     not_found: warn
+    absolute_links: warn
+  links:
+    not_found: warn
+    anchors: warn
+    absolute_links: warn
+    unrecognized_links: warn
 
 nav:
   - Overview:
@@ -68,6 +73,8 @@ theme:
     - navigation.tabs
     - navigation.sections
     - navigation.indexes
+    - navigation.path
+    - navigation.footer
     - navigation.top
     - navigation.tracking
     - toc.follow
@@ -122,11 +129,12 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
-  - pymdownx.arithmatex:
-      generic: true
 
 plugins:
   - search
+  # Moved pages keep their old URLs; anchors within a moved page are not redirected.
+  - redirects:
+      redirect_maps: {}
   - gen-files:
       scripts:
         - scripts/gen_ref_pages.py
@@ -181,13 +189,12 @@ plugins:
           - reference/api/ocbf.md
         Integrations:
           - integrations/*.md
-        Development:
+        # llms.txt convention: readers may skip this section when context is short.
+        Optional:
           - development/*.md
 
 extra_css:
   - stylesheets/extra.css
-extra_javascript:
-  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 watch:
   - ocbf
   - examples

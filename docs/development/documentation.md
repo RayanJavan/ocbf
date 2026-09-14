@@ -86,7 +86,7 @@ mkdocstrings uses it to format signatures consistently.
 The pins target Linux/Python 3.12. Windows can consume the same file, but dependencies
 selected only on Windows may be resolved additionally by pip; use WSL for exact parity
 with the hosted Python dependency set. The pins do not freeze Python patch releases,
-build-system dependencies, remote Python/NumPy inventories, or the MathJax CDN resource.
+build-system dependencies, or remote Python/NumPy inventories.
 
 ## Updating dependency pins
 
@@ -162,5 +162,5 @@ light and dark themes. Check diagrams, horizontal table/code scrolling, navigati
 copy controls, heading hierarchy, and source-edit links.
 
 Use Material's existing components and a small stylesheet. Keep contrast and focus states
-readable. The CI artifact is useful for review; Read the Docs can host the same generated
-site using the [hosting configuration and setup procedure](hosting.md).
+readable. The CI artifact is useful for review; Read the Docs hosts the same generated
+site with the [hosting configuration and settings](hosting.md).
