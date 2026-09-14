@@ -7,7 +7,9 @@ numerical execution, and process evaluation independently maintainable.
 - [Extensions](extensions.md): interpreter, channel, factor, engine, and evaluator contracts.
 - [Validation](validation.md): scientific reference checks and reproducible workloads.
 - [Documentation maintenance](documentation.md): content ownership and build gates.
+- [Documentation hosting](hosting.md): Read the Docs connection, previews, and versions.
 
-Work from the checkout with `.[dev,docs]` installed. Optional native validation additionally
-uses `.[oracles]`. The default development and documentation checks do not require a
-factory archive or credentials.
+Work from the checkout with `.[dev]` installed for library tests. Documentation uses the
+[pinned documentation environment](documentation.md#documentation-environment).
+Optional native validation additionally uses `.[oracles]`. The default development and
+documentation checks do not require a factory archive or credentials.

@@ -6,15 +6,67 @@ boundaries. Agreement between engines on a synthetic fixture is numerical eviden
 ## Routine checks
 
 ```bash
-python -m pip install -e ".[dev,docs]"
+python -m pip install -e ".[dev]"
 python -m pytest -q
+```
+
+Optional GTSAM checks run when `.[oracles]` is available. Their skips must not hide failure
+of the core finite reference route. Contract imports are checked without optional backends.
+
+### Documentation checks
+
+Install the [documentation environment](documentation.md#documentation-environment) first.
+These commands work in PowerShell and POSIX shells from the repository root. Confirm
+each command succeeds before continuing; PowerShell does not stop on every native command
+failure automatically.
+
+```text
+python -m pip check
+python -m unittest discover -s scripts/tests -v
 python scripts/check_docs.py
 python -m mkdocs build --strict
 python scripts/check_docs.py --site-dir site
 ```
 
-Optional GTSAM checks run when `.[oracles]` is available. Their skips must not hide failure
-of the core finite reference route. Contract imports are checked without optional backends.
+The URL regression checks cover local, release, preview, and alternate-host paths.
+The source check executes the complete documented examples; the strict MkDocs build
+generates the API reference through the configured plugins; the publication check inspects
+HTML links, anchors, API pages, search, and LLM output. Read the Docs runs the same source
+and publication checks around its native strict MkDocs build, using its own output path.
+
+When changing URL or hosting configuration, also build with a version path. This does not
+contact the placeholder hostname.
+
+=== "PowerShell"
+
+    ```powershell
+    $hadDocsUrl = Test-Path Env:DOCS_SITE_URL
+    $previousDocsUrl = $env:DOCS_SITE_URL
+    try {
+        $env:DOCS_SITE_URL = "https://example.invalid/en/latest/"
+        python -m mkdocs build --strict
+        if ($LASTEXITCODE -ne 0) { throw "Version-path build failed." }
+        python scripts/check_docs.py --site-dir site
+        if ($LASTEXITCODE -ne 0) { throw "Version-path publication checks failed." }
+    }
+    finally {
+        if ($hadDocsUrl) {
+            $env:DOCS_SITE_URL = $previousDocsUrl
+        }
+        else {
+            Remove-Item Env:DOCS_SITE_URL -ErrorAction SilentlyContinue
+        }
+    }
+    ```
+
+=== "POSIX shell"
+
+    ```bash
+    (
+      export DOCS_SITE_URL="https://example.invalid/en/latest/"
+      python -m mkdocs build --strict && python scripts/check_docs.py --site-dir site
+    )
+    ```
 
 ## Numerical reference seams
 
