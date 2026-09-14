@@ -84,77 +84,12 @@ conflicts and select the effective records. Reuse requires matching record, cont
 interpreter dependencies; cached admission issues and lineage are retained. Shared modes,
 clocks and associations can make the affected region cross several Jobs.
 
-## Initialize a revised sampling run
-
-Warm starts initialize new chains from retained chain states. They do not reuse old samples
-as new posterior draws or add the previous posterior as a likelihood.
-
-```python
-from dataclasses import replace
-from ocbf.api import warm_start_from
-from ocbf.inference.contracts import SamplingConfig
-
-sampling = InferencePolicy(
-    engine="blocked", sampling=SamplingConfig(chains=4, warmup=1000, draws=4000),
-)
-with ExecutionSession(max_cache_bytes=64 * 1024 * 1024, policy=sampling) as session:
-    old_model = compile_model(spec, session=session)
-    old_result = infer(
-        old_model, requirements=requirements_for(queries),
-        rng=np.random.default_rng(113), session=session,
-    )
-    hint = warm_start_from(old_model, old_result)
-    new_model = compile_model(replace(spec, parameters=settings["cautious"]), session=session)
-    new_result = infer(
-        new_model, requirements=requirements_for(queries),
-        rng=np.random.default_rng(114), session=session, warm_start=hint,
-    )
-    print(new_result.diagnostics["warm_start"])
-```
-
-States map through semantic keys and must satisfy the new domains, codec and support.
-The configured warmup is always completed. At least one chain is independently initialized;
-a one-chain configuration uses fresh initialization. Incompatible states are regenerated.
-Changed structure, support expansion/contraction, changed codec or unknown support
-compatibility regenerates the population. The run records the reason and source run/draw
-identities. Importance reweighting is not provided. Assess query-specific MCSE and mixing
-even when a run completes successfully.
-
-## Bound work and handle interruption
-
-```python
-from ocbf.api import ExecutionControl
-from ocbf.errors import OCBFError
-
-control = ExecutionControl(timeout_seconds=30, max_work_bytes=64 * 1024 * 1024)
-try:
-    result = infer(model, requirements=requirements_for(queries), policy=policy, control=control)
-except OCBFError as error:
-    print(error.execution)  # status, stage, location, resources and reuse counters
-else:
-    print(result.execution.status)
-```
-
-The deadline spans all calls sharing a control. `max_work_bytes` checks declared workspace
-estimates before allocations; it is **not a process RSS limit**. Table, clique, component
-and retained-draw budgets remain part of `InferencePolicy` and are checked on cache hits.
-`InferencePolicy.max_seconds` also bounds solving. Native calls such as GTSAM and dense
-linear algebra are checked at their boundaries and cannot be interrupted mid-call.
-
-Use `control.cancel()` or a `cancelled=` callback for cancellation. A `progress=` callback
-receives structured stage, work and allocation information; it may request cancellation.
-No root logger configuration, printing, thread pool or scheduling service is installed.
-
-Execution status is `complete`, `cancelled`, `resource-exhausted` or `failed`, separate
-from numerical quality and evidence limitations. No runtime stop selects another solver.
-Before usable output exists, a typed failure carries `.execution`; unexpected implementation
-errors become `ExecutionFailure` with their original cause. Unfinished normalization never
-returns an exact posterior. Usable partial chains retain their incomplete status and
-numerical qualifications. A partial query bundle lists completed and missing queries in
-`answer.execution.details`; missing answers are never replaced with zero.
+To start sampling for the revised target from earlier chains, see
+[warm-start sampling](warm-start.md).
 
 ## Retain or export results
 
-See [export and replay](export-replay.md) for result ownership, JSON/array artifacts, validation,
+To bound work or cancel a run, see [bound execution](bound-execution.md). See
+[export and replay](export-replay.md) for result ownership, JSON/array artifacts, validation,
 and summary-only retention. Extension-specific controls and reuse contracts belong in the
-[extension guide](../development/extensions.md#add-optional-execution-support).
+[extension guide](extend.md#add-optional-execution-support).

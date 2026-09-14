@@ -45,13 +45,12 @@ calculations under `artifacts/fixed-parameters`. No native solver or factory dat
 Read the documentation at **[ocbf.readthedocs.io](https://ocbf.readthedocs.io/)**. The
 sources for each section are also readable in this repository:
 
-- [Overview](docs/overview/workflow.md): the workflow and where the library fits.
 - [Getting started](docs/getting-started/index.md): installation and a complete assessment.
-- [Concepts](docs/concepts/index.md): library objects, their behavior, and concrete examples.
-- [How-to guides](docs/how-to/index.md): evidence, trust, inference, queries, and execution.
+- [Concepts](docs/concepts/index.md): the workflow, library objects, and their behavior.
+- [How-to guides](docs/how-to/index.md): evidence, inference, execution, and integration.
 - [Capabilities](docs/reference/capabilities.md): supported routes and their boundaries.
 - [Architecture](docs/development/architecture.md): module responsibilities and extension seams.
-- [Integrations](docs/integrations/index.md): application inputs and the Mammut example.
+- [Integrate an application](docs/how-to/integrate-application.md): application inputs and the Mammut example.
 - [Research](research/README.md): separate dated investigations and proposals.
 
 OCBF preserves evidence gaps and model qualifications. Numerical agreement does not

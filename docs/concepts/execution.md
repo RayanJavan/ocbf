@@ -59,5 +59,7 @@ Identical scientific inputs preserve their identities on supported replay. A new
 execution receives a new run identity. Releasing posterior capabilities with
 `summaries_only` preserves result metadata; separately held query answers remain distinct.
 
-Procedures are documented in [execution sessions](../how-to/repeated-execution.md) and
+Procedures are documented in [session reuse](../how-to/reuse-sessions.md),
+[warm-start sampling](../how-to/warm-start.md),
+[bound execution](../how-to/bound-execution.md), and
 [export/replay](../how-to/export-replay.md).

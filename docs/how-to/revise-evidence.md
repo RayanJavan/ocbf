@@ -45,7 +45,7 @@ it must not be advertised as an “as known then” reconstruction.
 
 Retractions may expand feasible support. Old samples cannot acquire newly possible states
 by reweighting. Use fresh inference or a validated
-[warm-start hint](repeated-execution.md#initialize-a-revised-sampling-run).
+[warm-start hint](warm-start.md).
 
 The complete nominal/correction/retraction command is
 `python -m examples.fixed_parameters`. See [export and replay](export-replay.md) for

@@ -9,7 +9,7 @@ OCBF combines interpreted reports under an explicit probability model, then answ
 questions about the resulting object-centric histories. You supply the semantic context,
 candidate support, source meaning, and manual trust.
 
-Take the [workflow tour](overview/workflow.md) to see the inputs, handoffs, and results.
+Read the [workflow overview](concepts/index.md) to see the inputs, handoffs, and results.
 
 [Run your first assessment](getting-started/quickstart.md){ .md-button .md-button--primary }
 [Explore capabilities](reference/capabilities.md){ .md-button }
@@ -26,7 +26,7 @@ probability is enough to follow along. Unfamiliar with a term? The
 [glossary](reference/glossary.md) defines the vocabulary used throughout.
 
 You call it from your own code; it is not a data pipeline, user interface, or scheduler.
-Those responsibilities stay in [your application](overview/workflow.md).
+Those responsibilities stay in [your application](how-to/integrate-application.md).
 
 <div class="grid cards" markdown>
 
@@ -75,7 +75,7 @@ flowchart LR
 </div>
 
 OCBF is an in-process library. Database access, ingestion, credentials, scheduling, and
-screens belong to the calling application. Its [integration boundary](integrations/index.md)
+screens belong to the calling application. Its [integration boundary](how-to/integrate-application.md)
 keeps producer-specific fields out of generic process queries.
 
 ## Understand the answer you receive

@@ -20,9 +20,7 @@ validation:
     unrecognized_links: warn
 
 nav:
-  - Overview:
-      - Home: index.md
-      - Workflow tour: overview/workflow.md
+  - Home: index.md
   - Getting started:
       - getting-started/index.md
       - Installation: getting-started/installation.md
@@ -38,16 +36,25 @@ nav:
       - Revisions and execution: concepts/execution.md
   - How-to guides:
       - how-to/index.md
-      - Interpret evidence: how-to/interpret-evidence.md
-      - Revise evidence: how-to/revise-evidence.md
-      - Configure manual trust: how-to/configure-trust.md
-      - Configure constraints: how-to/configure-constraints.md
-      - Choose inference: how-to/choose-inference.md
-      - Use joint inference: how-to/joint-inference.md
-      - Evaluate queries: how-to/evaluate-queries.md
-      - Read diagnostics: how-to/read-diagnostics.md
-      - Execution sessions: how-to/repeated-execution.md
-      - Export and replay: how-to/export-replay.md
+      - Evidence and assumptions:
+          - Interpret evidence: how-to/interpret-evidence.md
+          - Revise evidence: how-to/revise-evidence.md
+          - Configure manual trust: how-to/configure-trust.md
+          - Configure constraints: how-to/configure-constraints.md
+      - Inference and results:
+          - Choose inference: how-to/choose-inference.md
+          - Use joint inference: how-to/joint-inference.md
+          - Evaluate queries: how-to/evaluate-queries.md
+          - Read diagnostics: how-to/read-diagnostics.md
+      - Execution and retention:
+          - Reuse sessions: how-to/reuse-sessions.md
+          - Warm-start sampling: how-to/warm-start.md
+          - Bound execution: how-to/bound-execution.md
+          - Export and replay: how-to/export-replay.md
+      - Integrate and extend:
+          - Integrate an application: how-to/integrate-application.md
+          - Mammut retrospective: how-to/mammut-retrospective.md
+          - Extend OCBF: how-to/extend.md
   - Reference:
       - reference/index.md
       - Capabilities and limitations: reference/capabilities.md
@@ -55,13 +62,9 @@ nav:
       - Results and interchange: reference/results.md
       - Glossary: reference/glossary.md
       - API: reference/api/
-  - Integrations:
-      - integrations/index.md
-      - Mammut retrospective: integrations/mammut.md
   - Development:
       - development/index.md
       - Architecture: development/architecture.md
-      - Extensions: development/extensions.md
       - Validation: development/validation.md
       - Documentation maintenance: development/documentation.md
       - Documentation hosting: development/hosting.md
@@ -134,7 +137,12 @@ plugins:
   - search
   # Moved pages keep their old URLs; anchors within a moved page are not redirected.
   - redirects:
-      redirect_maps: {}
+      redirect_maps:
+        overview/workflow.md: concepts/index.md
+        integrations/index.md: how-to/integrate-application.md
+        integrations/mammut.md: how-to/mammut-retrospective.md
+        development/extensions.md: how-to/extend.md
+        how-to/repeated-execution.md: how-to/reuse-sessions.md
   - gen-files:
       scripts:
         - scripts/gen_ref_pages.py
@@ -176,7 +184,6 @@ plugins:
       sections:
         Overview:
           - index.md
-          - overview/*.md
         Getting started:
           - getting-started/*.md
         Concepts:
@@ -187,8 +194,6 @@ plugins:
           - reference/*.md
           - reference/api/ocbf/**/*.md
           - reference/api/ocbf.md
-        Integrations:
-          - integrations/*.md
         # llms.txt convention: readers may skip this section when context is short.
         Optional:
           - development/*.md

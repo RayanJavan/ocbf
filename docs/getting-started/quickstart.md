@@ -161,4 +161,4 @@ Continue with [Concepts](../concepts/index.md) for the objects and behavior behi
 assessment, then
 [evidence revisions](../how-to/revise-evidence.md),
 [inference selection](../how-to/choose-inference.md), or
-[repeated execution](../how-to/repeated-execution.md).
+[session reuse](../how-to/reuse-sessions.md).

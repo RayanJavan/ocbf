@@ -14,7 +14,7 @@ checks a constrained twelve-variable case against an independent symmetric refer
 records numerical diagnostics, and verifies seeded replay.
 
 Inputs, posterior draws, comparisons, and reports are written beneath the selected
-directory. Real source admission is a separate [Mammut integration](../integrations/mammut.md).
+directory. Real source admission is a separate [Mammut integration](mammut-retrospective.md).
 
 ## Preserve shared uncertainty
 

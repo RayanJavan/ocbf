@@ -2,17 +2,17 @@
 
 Keep one principal page for each subject and link to it from other paths.
 
-| Content | Owner |
-|---|---|
-| Purpose and workflow orientation | Overview |
-| Installation and first result | Getting started and executable finite example |
-| Procedures | How-to guides |
-| Core objects, behavior, and result meaning | Concepts |
-| Supported combinations and limitations | Reference tables |
-| Callable behavior | Source docstrings |
-| Module dependencies and extensions | Development |
-| Producer-specific prerequisites | Integration documentation |
-| Dated investigations | Repository research corpus, outside the site |
+| Section | Owns | Keeps out |
+|---|---|---|
+| Home | Purpose, try-it commands, one entry per section | Boundary prose repeated elsewhere, procedures |
+| Getting started | Installation, the first assessment, example studies | Option catalogues |
+| Concepts | Workflow overview, object meanings, behavior through examples | Exhaustive tables, call-by-call procedures |
+| How-to guides | One goal per page, including integration, admission, and extension | Status and field rules |
+| Reference | Capabilities, configuration, errors, result fields and status rules, glossary, API | Tutorials, rationale |
+| Source docstrings | Callable behavior | Narrative |
+| Development | Contributing, architecture, validation, documentation, hosting | User procedures |
+
+Dated investigations stay in the repository research corpus, outside the site.
 
 Concepts describes the library's main objects and their behavior through concrete examples.
 Topic headings name the subject, prose explains what happens, and short examples expose

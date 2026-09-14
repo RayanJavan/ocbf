@@ -4,7 +4,6 @@ Use the existing public contracts to keep source interpretation, probability sem
 numerical execution, and process evaluation independently maintainable.
 
 - [Architecture](architecture.md): responsibilities and dependency direction.
-- [Extensions](extensions.md): interpreter, channel, factor, engine, and evaluator contracts.
 - [Validation](validation.md): scientific reference checks and reproducible workloads.
 - [Documentation maintenance](documentation.md): content ownership and build gates.
 - [Documentation hosting](hosting.md): Read the Docs settings, previews, and versions.
