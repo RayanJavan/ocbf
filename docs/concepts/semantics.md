@@ -1,55 +1,165 @@
 # Semantic context
 
-A semantic context describes the objects, events, and relationships that a calculation
-can reason about. It combines a schema with a bounded set of candidates.
+A report such as "`op` ended at 10:15" only means something if OCBF knows what an Operation is,
+what an end event is, and which events could be involved. This page defines those things for the
+[running example](index.md#the-running-example). It also defines the **assertions**: the
+true-or-false facts that every later page works with.
 
-## Schema and universe
+## Schema: fixed meanings
 
-The schema defines types such as `Operation`, `start`, and `end`, together with qualified
-relationships such as “this event has this Operation as its subject.” The universe
-contains particular candidates: Operation `op` and events `start`, `short`, and `long`.
+A **schema** declares the types of events and objects, and the named relations allowed between
+them. For the running example, it declares `start` and `end` events, `Operation` objects, and a
+`subject` relation that says which Operation an event belongs to.
 
-| Object | Role in the synthetic assessment |
-|---|---|
-| `Schema` | Declares the Operation type, start/end event types, and subject relationship. |
-| `Universe` | Contains one Operation and three candidate events with their type support. |
-| `SemanticContext` | Captures those inputs, constraint declarations, and provenance for a calculation. |
-| `AssertionRef` | Identifies an assertion such as whether event `short` exists or belongs to `op`. |
+```python
+from ocbf.schema import E2OQualifier, EventType, Multiplicity, ObjectType, Schema
 
-A candidate event is a possibility. Its presence in the universe does not establish that
-it happened. Object identities and types are supplied inputs; event existence, supported
-event types, and associations can remain uncertain.
+schema: Schema = Schema(
+    [EventType("start"), EventType("end")],  # (1)!
+    [ObjectType("Operation")],
+    e2o=[
+        E2OQualifier("subject", kind, "Operation", Multiplicity(0, 1))  # (2)!
+        for kind in ("start", "end")
+    ],
+)
+```
 
-## Assertions and associations
+1.  Event types name kinds of occurrence. Declaring `end` says nothing about whether any end
+    happened.
+2.  An event-to-object (E2O) relation: a `start` or `end` event can have an `Operation` as its
+    `subject`, and `Multiplicity(0, 1)` allows at most one.
 
-The assertions “event `short` exists” and “event `short` belongs to Operation `op`” have
-different meanings. An endpoint report can concern both assertions together. Other
-evidence may support the event's existence without resolving its association.
+The schema says what *can* be stated, not what happened. It does not change during an assessment:
+correcting a report never changes what an `end` event is.
 
-Stable assertion references carry these meanings across evidence, models, and results:
+## Universe: the candidates
+
+A **[candidate](../reference/glossary.md)** is a particular event or object that might be part of
+the history. The **universe** lists all of them. The **semantic context** combines the schema, the
+universe, and a note on where they came from (provenance) into one value that cannot be modified.
+
+```python
+from datetime import UTC, datetime, timedelta
+
+from ocbf.universe import UniverseBuilder
+from ocbf.universe.context import SemanticContext
+
+AT = datetime(2026, 9, 8, 12, tzinfo=UTC)  # (1)!
+TIMES: dict[str, datetime] = {  # (2)!
+    "start": AT - timedelta(hours=2),
+    "short": AT - timedelta(minutes=105),
+    "long": AT - timedelta(hours=1),
+}
+
+builder: UniverseBuilder = UniverseBuilder(schema).add_object("op", "Operation")  # (3)!
+builder.add_event("start", type_support={"start"})
+builder.add_event("short", type_support={"end"})  # (4)!
+builder.add_event("long", type_support={"end"})
+context: SemanticContext = SemanticContext.from_universe(
+    builder.build(), provenance={"status": "synthetic"}
+)
+
+support: dict[str, tuple[str, ...]] = {
+    event.id: event.type_support for event in context.definition["events"]
+}
+for name, time in TIMES.items():
+    minutes: int = (time - TIMES["start"]) // timedelta(minutes=1)
+    print(name, support[name], f"+{minutes} min")
+```
+
+1.  The moment of the assessment, 12:00 UTC. Later pages use it as the cutoff for what is known
+    and as the end of the period the question looks at.
+2.  The time at which each candidate event would have happened. These are supplied inputs; the
+    model attaches them to the events on the [model page](model.md).
+3.  The Operation `op` is supplied as a fact: it exists and it is an `Operation`.
+4.  `short` and `long` are both possible ends, and each may only have the type `end`. Listing
+    them does not say that either one happened.
+
+Running the block prints:
+
+```text
+start ('start',) +0 min
+short ('end',) +15 min
+long ('end',) +60 min
+```
+
+The universe contains three candidate events before any report is read. Each candidate's allowed
+type is fixed. What remains uncertain is whether each event happened and whether it belongs to
+`op`. The context also gets an identifier computed from its contents, `context.context_id`. Models
+built from it store that identifier, so you can always tell which context a result came from.
+
+!!! note "Keep in mind"
+
+    A candidate is not evidence. The universe lists what *could* be part of the history. Reports,
+    and the probabilities computed from them, decide how plausible each candidate is.
+
+## Assertions: what can be true or false
+
+An **[assertion](../reference/glossary.md)** is one fact about the candidates that each possible
+history makes either true or false. OCBF refers to an assertion by a string that is the same
+everywhere in the library:
 
 ```python
 from ocbf.assertions import AssertionRef
 
-existence = AssertionRef.event_exists("short")
-association = AssertionRef.e2o("short", "subject", "op")
-print(str(existence))
-print(str(association))
+exists: dict[str, str] = {
+    event: str(AssertionRef.event_exists(event)) for event in TIMES  # (1)!
+}
+links: dict[str, str] = {
+    event: str(AssertionRef.e2o(event, "subject", "op")) for event in TIMES  # (2)!
+}
+print(exists["short"])
+print(links["short"])
 ```
 
-Compiled array positions are local to a calculation. They are not persistent identifiers
-for the assertions.
+1.  "Candidate event `short` happened."
+2.  "Candidate event `short` has Operation `op` as its `subject`."
+
+Running the block prints:
+
+```text
+event_exists(short)
+e2o(short, subject, op)
+```
+
+These are two different facts. An end event can happen without belonging to `op`. A report can
+also show that an event happened without showing which Operation it belongs to. Observations,
+model variables, and query results all refer to assertions by these strings. A compiled model also
+numbers its variables internally, but those numbers can differ between calculations, so they never
+identify an assertion.
 
 ## Candidate boundaries
 
-If the real endpoint is absent from the candidate universe, inference cannot discover it.
-A model containing only `short` and `long` can assess those alternatives and any permitted
-absence; it cannot assign probability to an unspecified third event.
+OCBF computes probabilities only for the candidates in the universe:
 
-Adding an alternative changes the context and model. Correcting a report about an existing
-candidate changes the evidence while the type meanings remain fixed.
+```python
+print(sorted(support))
+print("third" in support)
+```
 
-An event with an unknown time also differs from an event that did not occur. Its existence
-and time require separate model treatment. The [model topic](model.md) describes how these
-possibilities become histories; [query projections](queries.md#process-projections)
-describe which parts of a history enter a question.
+Running the block prints:
+
+```text
+['long', 'short', 'start']
+False
+```
+
+If the real end of `op` is not a candidate, no report can make OCBF consider it. This universe
+allows OCBF to weigh `short`, `long`, and the possibility that neither belongs to `op`. It cannot
+weigh an event named `third`. A report about `third` is rejected when the model is compiled, as
+[Models and constraints](model.md#what-compilation-checks) shows. Adding `third` as a candidate
+creates a different context with a different identifier, so results computed from the old context
+do not apply to it.
+
+An event with an unknown time is also different from an event that did not happen. Whether an event
+happened and when it happened are separate questions for the model.
+
+## Summary
+
+- The schema declares types and relations. The universe lists the candidate events and objects.
+  The semantic context combines both into one unmodifiable value with its own identifier.
+- Assertions such as `event_exists(short)` and `e2o(short, subject, op)` are the true-or-false
+  facts that each history decides. Every later object refers to them by the same strings.
+- OCBF never considers an event that is not a candidate.
+
+Next, [Evidence and observations](evidence.md) connects reports to these assertions.

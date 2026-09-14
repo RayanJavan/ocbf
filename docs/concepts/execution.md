@@ -1,63 +1,214 @@
 # Revisions and execution
 
-OCBF calculations have separate input, model, run, and query identities. These distinguish
-a changed scientific question from another execution of the same question.
+Real assessments change: a report is corrected, a trust value is revised, or a different reference
+is asked about. OCBF uses identifiers to tell which results still apply after a change, and it can
+reuse work that a change did not affect. This page uses the objects built on the previous pages.
+
+## Models and runs
+
+Everything that determines the probabilities is part of the model: the context, the evidence, the
+parameters, and the factors. The compiled model gets an identifier computed from all of these,
+`model_id`. Each inference run also gets its own identifier, `run_id`:
+
+```python
+again: InferenceResult = infer(model, requirements=requirements, policy=policy)
+print("same model:", again.model_id == result.model_id)
+print("new run:", again.run_id != result.run_id)
+print(
+    "same probabilities:",
+    float(again.posterior.marginal(links["short"]).probabilities[1])
+    == float(result.posterior.marginal(links["short"]).probabilities[1]),
+)
+```
+
+Running the block prints:
+
+```text
+same model: True
+new run: True
+same probabilities: True
+```
+
+`model_id` says *what* was calculated, and `run_id` says *which run* produced a particular result.
+Two exact runs of the same model give the same probabilities.
 
 ## What changes a calculation
 
-| Change | Effect |
-|---|---|
-| A positive endpoint report is replaced with a negative report | A new effective evidence state and model calculation. |
-| Manual channel values change from nominal to cautious | A new parameter set and model target. |
-| A third candidate end event is added | A changed semantic context, support, and model. |
-| The duration reference changes from 30 to 45 minutes | A changed query; an adequate existing posterior can be reused. |
-| The random seed changes | Another numerical run of the same target. |
+A change to the evidence or the parameters produces a different model:
 
-Immutable values keep earlier inputs and results available. Updating a report does not
-mutate the posterior previously calculated from its earlier revision.
+```python
+corrected: InterpretedEvidence = prepare_evidence(
+    (*records, correction), as_of=AT, context=context, interpreters=interpreters  # (1)!
+)
+corrected_model: CompiledModel = compile_model(replace(spec, evidence=corrected))
+cautious_model: CompiledModel = compile_model(replace(spec, parameters=cautious))  # (2)!
+print("corrected report, new model:", corrected_model.model_id != model.model_id)
+print("cautious trust, new model:", cautious_model.model_id != model.model_id)
+```
 
-## Sessions and reusable artifacts
+1.  The negative correction of `long` from [Evidence and observations](evidence.md#revisions-and-knowledge-time).
+2.  The cautious parameter set from [Parameters and trust](parameters.md#assumption-sensitivity).
 
-An `ExecutionSession` owns a bounded in-memory artifact store. Repeated calls can reuse
-artifacts whose dependencies still match, such as compiled structure or query work.
-A changed trust value invalidates the affected numerical contributions even when the
-candidate structure stays the same.
+Running the block prints:
 
-Reuse is transparent to scientific meaning: a fresh calculation and a reused calculation
-address the same target. Unknown extension dependencies can cause work to run afresh.
+```text
+corrected report, new model: True
+cautious trust, new model: True
+```
 
-Closing the session releases its stored references. An inference result or query result
-still held by the application remains available.
+A change to the question alone needs no new model or inference. The existing posterior is simply
+evaluated again:
+
+```python
+for minutes in (10, 90):
+    variant: QuerySpec = replace(
+        duration,
+        name=f"duration over {minutes} min",
+        reference={
+            "reference_id": "synthetic-reference-v1",
+            "threshold_minutes": {"op": minutes},
+        },
+    )
+    variant_answers: QueryResults = evaluate(result, QueryBundle((variant,)))
+    print(
+        f"{minutes} min: value {variant_answers.estimates[0].value:.1f},",
+        "same run:", variant_answers.run_id == result.run_id,
+    )
+```
+
+Running the block prints:
+
+```text
+10 min: value 1.0, same run: True
+90 min: value 0.0, same run: True
+```
+
+With a 10-minute reference, both closed histories are violations. With a 90-minute reference,
+neither is. Both answers come from the same inference run.
+
+| Change | What must be computed again | Shown on |
+|---|---|---|
+| A corrected, retracted, or late report | New evidence, model, and inference | `corrected_model` above |
+| Different trust values or assumptions | New parameter set, model, and inference | `cautious_model` above |
+| An added candidate | New context, model, and inference | [Semantic context](semantics.md#candidate-boundaries) |
+| A different reference or question | Only the query evaluation | The 10- and 90-minute references above |
+| A different random seed | Only the inference run; the model stays the same | [Inference and posteriors](inference.md#posterior-representations) |
+
+A change never modifies results computed earlier: `result` still holds the probabilities computed
+from the original report.
+
+## Sessions and reuse
+
+Recomputing everything after every change wastes work. An `ExecutionSession` keeps intermediate
+results in memory, up to a size limit you choose, and reuses them when their inputs have not
+changed:
+
+```python
+from ocbf.api import ExecutionSession
+
+with ExecutionSession(max_cache_bytes=64 * 1024 * 1024, policy=policy) as session:  # (1)!
+    session_model: CompiledModel = compile_model(spec, session=session)
+    session_result: InferenceResult = infer(
+        session_model, requirements=requirements, session=session
+    )
+    first: QueryResults = evaluate(session_result, bundle, session=session)
+    repeated: QueryResults = evaluate(session_result, bundle, session=session)  # (2)!
+    print("reused stored work:", session.stats["hits"] > 0)
+print(
+    "same answers as without a session:",
+    [e.value for e in repeated.estimates] == [e.value for e in answers.estimates],
+)
+```
+
+1.  The size limit in bytes is required. Calls inside the session that pass no policy use the
+    session's policy.
+2.  Evaluating the same questions on the same result again reuses the stored evaluation.
+
+Running the block prints:
+
+```text
+reused stored work: True
+same answers as without a session: True
+```
+
+Reuse never changes an answer: a result from a session equals the result computed without one.
+When an input changes, for example a trust value, the work that depends on it is computed again.
+Closing the session releases what it stored. Results you still hold, such as `repeated`, remain
+usable.
 
 ## Sampling after a revision
 
-A compatible earlier sampled result can supply initialization hints for a revised target.
-The sampler validates structure, support, and execution representation before using them.
-It still performs warmup and retains an independently initialized comparison chain.
+After a correction, a sampler for the new model can start from the histories drawn in an earlier
+run, instead of from scratch. OCBF first checks that those histories are still possible in the new
+model. It then still discards warmup draws, and it runs one additional chain started independently
+for comparison.
 
-A warm start is not additional evidence. A support change can require fresh initialization
-instead of reusing old assignments.
+!!! note "Keep in mind"
+
+    A **[warm start](../reference/glossary.md)** is not evidence. It only saves computation: the
+    earlier histories are a starting point for the sampler, and they add nothing to what the reports
+    say. When a change makes new histories possible, for example after a retraction, the sampler has
+    to start fresh.
+
+See [warm-start sampling](../how-to/warm-start.md) for the procedure.
 
 ## Controls and incomplete results
 
-`ExecutionControl` provides cooperative cancellation, deadlines, progress callbacks, and
-declared workspace checks. A deadline shared across calls spans those calls. A native
-operation may be checked only before and after its execution.
+`ExecutionControl` lets you set a deadline, cancel a calculation, receive progress callbacks, and
+check declared memory limits. OCBF checks these controls at fixed points during a calculation. An
+operation running inside a native library is therefore checked only before it starts and after it
+finishes.
 
-A stop never turns an unfinished calculation into a complete answer; see
-[incomplete execution](../reference/results.md#incomplete-execution) for the status rules.
+A calculation that is stopped never returns a result that looks complete. Its status is
+`cancelled`, `resource-exhausted`, or `failed`, never `complete`. See
+[bound execution](../how-to/bound-execution.md) and the
+[rules for incomplete execution](../reference/results.md#incomplete-execution).
 
 ## Replay and retention
 
-Neutral exports retain supported inputs and results, while array artifacts hold supported
-posterior arrays. Replay reconstructs declared values and requires any external extension
-implementations to be supplied again.
+A posterior can be large. Once the questions are answered, you can drop it and keep a summary:
 
-Identical scientific inputs preserve their identities on supported replay. A new inference
-execution receives a new run identity. Releasing posterior capabilities with
-`summaries_only` preserves result metadata; separately held query answers remain distinct.
+```python
+from ocbf.api import summaries_only
 
-Procedures are documented in [session reuse](../how-to/reuse-sessions.md),
-[warm-start sampling](../how-to/warm-start.md),
-[bound execution](../how-to/bound-execution.md), and
-[export/replay](../how-to/export-replay.md).
+summary: InferenceResult = summaries_only(result)  # (1)!
+print("capabilities left:", summary.capabilities)
+print(
+    "identifiers kept:",
+    summary.model_id == result.model_id and summary.run_id == result.run_id,
+)
+print("earlier answer unchanged:", answers.estimates[0].value)
+```
+
+1.  Returns a copy of the result without the posterior, keeping its identifiers and the record of
+    how it was computed.
+
+Running the block prints:
+
+```text
+capabilities left: ()
+identifiers kept: True
+earlier answer unchanged: 0.5
+```
+
+The summary can no longer answer new questions, because it has no capabilities left. It still
+records what was calculated and how. Answers evaluated earlier are separate objects and are not
+affected.
+
+To make a calculation reproducible, export its inputs. **[Replaying](../reference/glossary.md)**
+identical inputs gives the same `model_id` and the same exact answers, with a new `run_id`. Any
+extension code that the original calculation used, such as a custom interpreter, must be supplied
+again. See [export and replay](../how-to/export-replay.md).
+
+## Summary
+
+- `model_id` identifies what is calculated, and `run_id` identifies one run. A change to evidence,
+  trust values, or candidates produces a new model; a change to the question only reuses the
+  posterior.
+- A session reuses work whose inputs have not changed, and it never changes an answer.
+- Warm starts, controls, and summaries change how work is done or kept. They never change what the
+  evidence says.
+
+For procedures, see [reuse sessions](../how-to/reuse-sessions.md),
+[warm-start sampling](../how-to/warm-start.md), [bound execution](../how-to/bound-execution.md),
+and [export and replay](../how-to/export-replay.md).
