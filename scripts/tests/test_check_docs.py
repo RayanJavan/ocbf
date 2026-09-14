@@ -80,5 +80,40 @@ class SiteLinksTests(unittest.TestCase):
                     CHECK_DOCS.check_site_links(self.site)
 
 
+class RedirectTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        (self.root / "mkdocs.yml").write_text(
+            "site_name: Redirect fixture\n"
+            "plugins:\n  - redirects:\n      redirect_maps:\n"
+            "        old/page.md: new/index.md\n",
+            encoding="utf-8",
+        )
+        self.site = self.root / "site"
+        (self.site / "new").mkdir(parents=True)
+        (self.site / "new/index.html").write_text("<h1>New</h1>", encoding="utf-8")
+        (self.site / "old/page").mkdir(parents=True)
+        self.enterContext(patch.object(CHECK_DOCS, "ROOT", self.root))
+
+    def redirect(self, url):
+        (self.site / "old/page/index.html").write_text(
+            f'<meta http-equiv="refresh" content="0; url={url}">', encoding="utf-8"
+        )
+
+    def test_redirect_reaches_mapped_page(self):
+        self.redirect("../../new/")
+        CHECK_DOCS.check_redirects(self.site)
+
+    def test_wrong_or_missing_redirect_is_rejected(self):
+        self.redirect("../../elsewhere/")
+        with self.assertRaisesRegex(ValueError, "does not reach"):
+            CHECK_DOCS.check_redirects(self.site)
+        (self.site / "old/page/index.html").unlink()
+        with self.assertRaisesRegex(ValueError, "missing redirect page"):
+            CHECK_DOCS.check_redirects(self.site)
+
+
 if __name__ == "__main__":
     unittest.main()

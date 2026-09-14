@@ -114,6 +114,29 @@ GROUPS = {
 }
 
 
+# Navigation tiers: the facade and scientific contracts first, narrower utilities after.
+TIERS = {
+    "Workflow and contracts": (
+        "Workflow",
+        "Semantic context",
+        "Evidence and parameters",
+        "Canonical model",
+        "Inference and belief",
+        "Queries",
+        "Execution and interchange",
+    ),
+    "Numerical and source utilities": (
+        "Numerical utilities",
+        "Source diagnostics and evaluation",
+    ),
+}
+
+
+def tier_of(group):
+    """Return the navigation tier that contains a reference group."""
+    return next(tier for tier, groups in TIERS.items() if group in groups)
+
+
 def module_path(root, module):
     """Resolve only an explicit public package/module under the repository root."""
     if any(part.startswith("_") for part in module.split(".")):

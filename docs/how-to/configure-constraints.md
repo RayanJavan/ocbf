@@ -11,7 +11,7 @@ between excluding a history and assessing it against a duration reference.
 | Normative reference | Query specification | Histories can violate the reference and be assessed. |
 
 Classify catalogue multiplicities through the semantic context and supplied
-`cardinality_role` assumption. The [quickstart model](../getting-started/quickstart.md#5-define-support-and-process-questions)
+`cardinality_role` assumption. The [quickstart model](../getting-started/quickstart.md#define-support-and-process-questions)
 uses normative catalogue multiplicities and separately declares an at-most-one end
 association as hard support.
 

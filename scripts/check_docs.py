@@ -107,7 +107,9 @@ def check_examples():
         "how-to/choose-inference.md",
         "how-to/evaluate-queries.md",
         "how-to/read-diagnostics.md",
-        "how-to/repeated-execution.md",
+        "how-to/reuse-sessions.md",
+        "how-to/warm-start.md",
+        "how-to/bound-execution.md",
         "reference/configuration.md",
         "concepts/semantics.md",
         "concepts/parameters.md",
@@ -197,6 +199,31 @@ def check_site(directory, modules):
     print("Publication checks passed: reference, search and LLM corpus are current.")
 
 
+def built_page(directory, page):
+    """Return the HTML file MkDocs writes for a source page with directory URLs."""
+    parts = Path(page).with_suffix("").parts
+    return directory.joinpath(*(parts[:-1] if parts[-1] == "index" else parts), "index.html")
+
+
+def check_redirects(directory):
+    directory = directory.resolve()
+    config = yaml.load((ROOT / "mkdocs.yml").read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    plugins = [p for p in config.get("plugins", []) if isinstance(p, dict) and "redirects" in p]
+    maps = plugins[0]["redirects"].get("redirect_maps") or {} if plugins else {}
+    for old, new in maps.items():
+        source = built_page(directory, old)
+        require(source.is_file(), f"missing redirect page: {old}")
+        html = source.read_text(encoding="utf-8")
+        refresh = re.search(r'http-equiv="refresh" content="0; url=([^"]+)"', html)
+        require(refresh, f"redirect page has no refresh target: {old}")
+        target = (source.parent / unquote(urlsplit(refresh[1]).path)).resolve()
+        if target.is_dir():
+            target /= "index.html"
+        expected = built_page(directory, new).resolve()
+        require(target == expected, f"redirect {old} does not reach {new}")
+    print(f"Redirect checks passed: {len(maps)} moved pages.")
+
+
 class PageLinks(HTMLParser):
     """Collect HTML targets without depending on a browser or theme implementation."""
 
@@ -260,6 +287,7 @@ def main():
     modules = check_sources()
     if args.site_dir:
         check_site(args.site_dir, modules)
+        check_redirects(args.site_dir)
         check_site_links(args.site_dir)
     elif not args.skip_examples:
         check_examples()

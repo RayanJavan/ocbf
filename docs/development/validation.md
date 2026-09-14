@@ -24,6 +24,7 @@ failure automatically.
 python -m pip check
 python -m unittest discover -s scripts/tests -v
 python scripts/check_docs.py
+python scripts/check_docstrings.py
 python -m mkdocs build --strict
 python scripts/check_docs.py --site-dir site
 ```
@@ -105,23 +106,9 @@ and common-history query evaluation; assess error on the actual reported quantit
 
 ## Executable workloads
 
-| Command | Purpose |
-|---|---|
-| `python -m examples.fixed_parameters` | Finite assessment, named trust, and deterministic revision/replay. |
-| `python -m examples.joint_inference` | Same-target exact/sampling comparison and a constrained count reference. |
-| `python -m examples.repeated_execution` | Paired fresh/cold/warm trust and query workloads. |
-| `python -m examples.resource_validation` | Revision, hybrid, constrained sampling, resources, and warm-start measurements. |
+The runnable studies and their measurement protocols are catalogued in
+[example studies](../getting-started/examples.md). Generated reports belong under ignored
+`artifacts` directories. Avoid fixed test totals and universal factory-scale claims.
 
-The repeated-execution protocol records seeds, environment, repetitions, retained byte
-budgets, numerical tolerances, and a median/MAD comparison. The supplemental workload
-checks correctness and resource behavior without a universal speedup gate.
-
-Generated reports belong under ignored `artifacts` directories. Publish a performance
-claim only with its workload, environment, inputs, and reproduction command. Avoid fixed
-test totals and universal factory-scale claims.
-
-## Evidence admission
-
-Mammut admission checks establish what retained sources contain and whether historical
-bindings are adequate. They do not supply physical ground truth. Numerical fixtures and
-real-source records remain explicitly distinguished.
+Evidence admission is validated separately; see the
+[Mammut retrospective](../how-to/mammut-retrospective.md).

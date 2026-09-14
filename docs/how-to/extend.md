@@ -55,4 +55,4 @@ reuse/invalidation checks. Keep inputs/results neutral and preserve units and or
 
 A replay requiring external implementations must receive those registries again.
 Named extensions are not automatically portable executable code. See
-[validation](validation.md) and [export/replay](../how-to/export-replay.md).
+[validation](../development/validation.md) and [export/replay](export-replay.md).

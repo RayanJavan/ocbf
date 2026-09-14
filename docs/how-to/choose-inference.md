@@ -44,4 +44,4 @@ joints, hybrid components, real dimensions, and retained draws.
 A successful preflight is not a convergence guarantee, proof of a positive normalizer,
 or proof that an optional native backend will load. See
 [errors and configuration](../reference/configuration.md) for the actual defaults and
-[execution controls](repeated-execution.md#bound-work-and-handle-interruption).
+[execution controls](bound-execution.md).

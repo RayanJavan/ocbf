@@ -1,8 +1,10 @@
 """List public reference members that render as bare signatures without a docstring."""
 
+import argparse
 import ast
 from pathlib import Path
 import runpy
+import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -44,5 +46,12 @@ def main():
 
 
 if __name__ == "__main__":
-    # Baseline report, not a gate: always exit 0.
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--max", type=int, help="fail when the undocumented count exceeds this ratchet"
+    )
+    args = parser.parse_args()
+    # Without --max this is a report and exits 0; with it, the count may only go down.
+    total = main()
+    if args.max is not None and total > args.max:
+        sys.exit(f"Undocumented public members rose to {total}; the ratchet allows {args.max}.")

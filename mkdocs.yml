@@ -7,21 +7,25 @@ site_url: !ENV [DOCS_SITE_URL, READTHEDOCS_CANONICAL_URL, "http://127.0.0.1:8000
 repo_url: https://github.com/RayanJavan/ocbf
 repo_name: RayanJavan/ocbf
 edit_uri: edit/main/docs/
+strict: true
 validation:
   nav:
     omitted_files: warn
-  links:
-    anchors: warn
     not_found: warn
+    absolute_links: warn
+  links:
+    not_found: warn
+    anchors: warn
+    absolute_links: warn
+    unrecognized_links: warn
 
 nav:
-  - Overview:
-      - Home: index.md
-      - Workflow tour: overview/workflow.md
+  - Home: index.md
   - Getting started:
       - getting-started/index.md
       - Installation: getting-started/installation.md
       - First assessment: getting-started/quickstart.md
+      - Example studies: getting-started/examples.md
   - Concepts:
       - concepts/index.md
       - Semantic context: concepts/semantics.md
@@ -33,16 +37,25 @@ nav:
       - Revisions and execution: concepts/execution.md
   - How-to guides:
       - how-to/index.md
-      - Interpret evidence: how-to/interpret-evidence.md
-      - Revise evidence: how-to/revise-evidence.md
-      - Configure manual trust: how-to/configure-trust.md
-      - Configure constraints: how-to/configure-constraints.md
-      - Choose inference: how-to/choose-inference.md
-      - Use joint inference: how-to/joint-inference.md
-      - Evaluate queries: how-to/evaluate-queries.md
-      - Read diagnostics: how-to/read-diagnostics.md
-      - Execution sessions: how-to/repeated-execution.md
-      - Export and replay: how-to/export-replay.md
+      - Evidence and assumptions:
+          - Interpret evidence: how-to/interpret-evidence.md
+          - Revise evidence: how-to/revise-evidence.md
+          - Configure manual trust: how-to/configure-trust.md
+          - Configure constraints: how-to/configure-constraints.md
+      - Inference and results:
+          - Choose inference: how-to/choose-inference.md
+          - Use joint inference: how-to/joint-inference.md
+          - Evaluate queries: how-to/evaluate-queries.md
+          - Read diagnostics: how-to/read-diagnostics.md
+      - Execution and retention:
+          - Reuse sessions: how-to/reuse-sessions.md
+          - Warm-start sampling: how-to/warm-start.md
+          - Bound execution: how-to/bound-execution.md
+          - Export and replay: how-to/export-replay.md
+      - Integrate and extend:
+          - Integrate an application: how-to/integrate-application.md
+          - Mammut retrospective: how-to/mammut-retrospective.md
+          - Extend OCBF: how-to/extend.md
   - Reference:
       - reference/index.md
       - Capabilities and limitations: reference/capabilities.md
@@ -50,13 +63,9 @@ nav:
       - Results and interchange: reference/results.md
       - Glossary: reference/glossary.md
       - API: reference/api/
-  - Integrations:
-      - integrations/index.md
-      - Mammut retrospective: integrations/mammut.md
   - Development:
       - development/index.md
       - Architecture: development/architecture.md
-      - Extensions: development/extensions.md
       - Validation: development/validation.md
       - Documentation maintenance: development/documentation.md
       - Documentation hosting: development/hosting.md
@@ -68,6 +77,8 @@ theme:
     - navigation.tabs
     - navigation.sections
     - navigation.indexes
+    - navigation.path
+    - navigation.footer
     - navigation.top
     - navigation.tracking
     - toc.follow
@@ -122,11 +133,17 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
-  - pymdownx.arithmatex:
-      generic: true
 
 plugins:
   - search
+  # Moved pages keep their old URLs; anchors within a moved page are not redirected.
+  - redirects:
+      redirect_maps:
+        overview/workflow.md: concepts/index.md
+        integrations/index.md: how-to/integrate-application.md
+        integrations/mammut.md: how-to/mammut-retrospective.md
+        development/extensions.md: how-to/extend.md
+        how-to/repeated-execution.md: how-to/reuse-sessions.md
   - gen-files:
       scripts:
         - scripts/gen_ref_pages.py
@@ -168,7 +185,6 @@ plugins:
       sections:
         Overview:
           - index.md
-          - overview/*.md
         Getting started:
           - getting-started/*.md
         Concepts:
@@ -179,15 +195,12 @@ plugins:
           - reference/*.md
           - reference/api/ocbf/**/*.md
           - reference/api/ocbf.md
-        Integrations:
-          - integrations/*.md
-        Development:
+        # llms.txt convention: readers may skip this section when context is short.
+        Optional:
           - development/*.md
 
 extra_css:
   - stylesheets/extra.css
-extra_javascript:
-  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 watch:
   - ocbf
   - examples

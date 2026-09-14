@@ -5,52 +5,57 @@ hide:
 
 # Reason about uncertain process histories
 
-OCBF combines interpreted reports under an explicit probability model, then answers
-questions about the resulting object-centric histories. You supply the semantic context,
-candidate support, source meaning, and manual trust.
-
-Take the [workflow tour](overview/workflow.md) to see the inputs, handoffs, and results.
+OCBF takes possibly-conflicting reports about what happened in a process, weighs how much
+to trust each source, and answers questions about what most likely happened — while keeping
+the uncertainty explicit instead of guessing a single history. You call it from your own
+code; it is not a data pipeline, user interface, or scheduler.
 
 [Run your first assessment](getting-started/quickstart.md){ .md-button .md-button--primary }
 [Explore capabilities](reference/capabilities.md){ .md-button }
 
-## What OCBF is, in plain terms
+## Try it
 
-OCBF takes possibly-conflicting reports about what happened in a process, weighs how much
-to trust each source, and answers questions about what most likely happened — while keeping
-the uncertainty explicit instead of guessing a single history.
+Python 3.12 or later is required. From a clone of the repository, with an activated
+environment (see [installation](getting-started/installation.md)):
 
-It is for people integrating process or event data who need calibrated, auditable answers
-rather than one silently-chosen story. Familiarity with event and process data and basic
-probability is enough to follow along. Unfamiliar with a term? The
-[glossary](reference/glossary.md) defines the vocabulary used throughout.
+```bash
+python -m pip install -e .
+python -m examples.fixed_parameters
+```
 
-You call it from your own code; it is not a data pipeline, user interface, or scheduler.
-Those responsibilities stay in [your application](overview/workflow.md).
+The example uses synthetic reports and the core finite reference engine.
+
+## Find your way
 
 <div class="grid cards" markdown>
 
-- **Start with a working example**
+- **Getting started**
 
-    Install the library and follow a complete synthetic evidence-to-query calculation.
+    Learn by doing: install the library and follow a complete synthetic assessment.
 
     [Getting started →](getting-started/index.md)
 
-- **Apply it to your question**
+- **Concepts**
 
-    Interpret reports, configure trust, choose inference, and inspect qualified results.
-
-    [How-to guides →](how-to/index.md)
-
-- **Understand the model**
-
-    See how fixed semantics, evidence revisions, joint uncertainty, and computation fit together.
+    Understand the workflow, the library objects, and why results carry qualifications.
 
     [Concepts →](concepts/index.md)
 
-- **Build on the contracts**
+- **How-to guides**
 
-    Inspect the current architecture and add interpreters, channels, engines, or evaluators.
+    Solve one task: interpret reports, choose inference, bound execution, or integrate.
+
+    [How-to guides →](how-to/index.md)
+
+- **Reference**
+
+    Look up capabilities, configuration, result fields, the glossary, and the API.
+
+    [Reference →](reference/index.md)
+
+- **Development**
+
+    Contribute: architecture, validation, and documentation maintenance.
 
     [Development →](development/index.md)
 
@@ -74,9 +79,8 @@ flowchart LR
 
 </div>
 
-OCBF is an in-process library. Database access, ingestion, credentials, scheduling, and
-screens belong to the calling application. Its [integration boundary](integrations/index.md)
-keeps producer-specific fields out of generic process queries.
+Database access, ingestion, credentials, scheduling, and screens belong to the calling
+application; see the [integration boundary](how-to/integrate-application.md).
 
 ## Understand the answer you receive
 

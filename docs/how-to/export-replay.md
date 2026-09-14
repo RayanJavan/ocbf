@@ -58,5 +58,5 @@ Seeded stochastic replay is environment-dependent. Use numerical comparisons acr
 different backends or environments rather than promising universal bitwise equality.
 
 Releasing a result's posterior does not release other caller references or session entries.
-See [session ownership](repeated-execution.md). Exported posterior capabilities are
+See [session ownership](reuse-sessions.md). Exported posterior capabilities are
 documented with [result meanings](../reference/results.md#interchange-and-retention).

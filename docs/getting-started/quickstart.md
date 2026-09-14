@@ -7,7 +7,7 @@ and association remain uncertain; endpoint times are fixed inputs.
 The complete executable source is `examples/fixed_parameters.py`. The source excerpts
 below are included directly from that file.
 
-## 1. Run the complete example
+## Run the complete example
 
 After [installation](installation.md), run:
 
@@ -25,7 +25,7 @@ under `artifacts/fixed-parameters`. The command explicitly selects the core
     demonstration inputs. The calculation validates numerical mechanics, not factory accuracy.
     See [capabilities and limitations](../reference/capabilities.md).
 
-## 2. Supply the semantic context
+## Supply the semantic context
 
 The fixture declares event/object types and a qualified relation, then instantiates three
 candidate events for one Operation. A candidate is a possible occurrence, not an observation.
@@ -38,7 +38,7 @@ The snippets inside `example_inputs` share the imports and the fixed UTC constan
 top of the executable file. They are source excerpts; run the complete module rather than
 pasting individual function fragments into a fresh interpreter.
 
-## 3. Interpret versioned reports
+## Interpret versioned reports
 
 Each report has a source, producer version, stable record identity, revision identity,
 knowledge time, and explicit synthetic provenance.
@@ -60,7 +60,7 @@ exactly which assertions one report concerns.
 Interpretation and likelihood construction are separate. In a real integration, inspect
 admission issues before accepting observations. See [interpret evidence](../how-to/interpret-evidence.md).
 
-## 4. Resolve manual trust and model assumptions
+## Resolve manual trust and model assumptions
 
 The example supplies all needed Boolean priors, classifies catalogue multiplicities, and
 declares the independence assumption between distinct information groups. It resolves two
@@ -74,7 +74,7 @@ These settings are assumptions held fixed during inference; comparing named sett
 [assumption sensitivity](../concepts/parameters.md#assumption-sensitivity), not a credible
 interval. The [trust guide](../how-to/configure-trust.md) shows resolution and comparison.
 
-## 5. Define support and process questions
+## Define support and process questions
 
 The model permits at most one end association. Its decoding binds the fixed endpoint times.
 
@@ -94,7 +94,7 @@ descriptive overlap with a supplied condition interval.
     --8<-- "examples/fixed_parameters.py:queries"
     ```
 
-## 6. Compile, infer, and evaluate
+## Compile, infer, and evaluate
 
 This complete interactive block uses the executable fixture to supply every input:
 
@@ -142,7 +142,7 @@ the qualifications state the conditions under which the number holds.
 A missing or non-evaluable history contributes explicit outcome information. Read the
 denominator and qualifications alongside the value; see [result meanings](../reference/results.md).
 
-## 7. Replay and revise
+## Replay and revise
 
 The full command exports inputs before inference and checks their replay. Reproduce the
 nominal result from the recorded bundle:
@@ -157,8 +157,8 @@ The injected correction replaces an end report. The retraction withdraws that re
 Both create a new effective evidence state and a new calculation. Replaying identical
 scientific inputs preserves their identities and deterministic answers; run identity changes.
 
-Continue with [Concepts](../concepts/index.md) for the objects and behavior behind this
-assessment, then
+Run the larger [example studies](examples.md) next, or continue with
+[Concepts](../concepts/index.md) for the objects and behavior behind this assessment, then
 [evidence revisions](../how-to/revise-evidence.md),
 [inference selection](../how-to/choose-inference.md), or
-[repeated execution](../how-to/repeated-execution.md).
+[session reuse](../how-to/reuse-sessions.md).

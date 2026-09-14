@@ -2,17 +2,17 @@
 
 Keep one principal page for each subject and link to it from other paths.
 
-| Content | Owner |
-|---|---|
-| Purpose and workflow orientation | Overview |
-| Installation and first result | Getting started and executable finite example |
-| Procedures | How-to guides |
-| Core objects, behavior, and result meaning | Concepts |
-| Supported combinations and limitations | Reference tables |
-| Callable behavior | Source docstrings |
-| Module dependencies and extensions | Development |
-| Producer-specific prerequisites | Integration documentation |
-| Dated investigations | Repository research corpus, outside the site |
+| Section | Owns | Keeps out |
+|---|---|---|
+| Home | Purpose, try-it commands, one entry per section | Boundary prose repeated elsewhere, procedures |
+| Getting started | Installation, the first assessment, example studies | Option catalogues |
+| Concepts | Workflow overview, object meanings, behavior through examples | Exhaustive tables, call-by-call procedures |
+| How-to guides | One goal per page, including integration, admission, and extension | Status and field rules |
+| Reference | Capabilities, configuration, errors, result fields and status rules, glossary, API | Tutorials, rationale |
+| Source docstrings | Callable behavior | Narrative |
+| Development | Contributing, architecture, validation, documentation, hosting | User procedures |
+
+Dated investigations stay in the repository research corpus, outside the site.
 
 Concepts describes the library's main objects and their behavior through concrete examples.
 Topic headings name the subject, prose explains what happens, and short examples expose
@@ -86,7 +86,7 @@ mkdocstrings uses it to format signatures consistently.
 The pins target Linux/Python 3.12. Windows can consume the same file, but dependencies
 selected only on Windows may be resolved additionally by pip; use WSL for exact parity
 with the hosted Python dependency set. The pins do not freeze Python patch releases,
-build-system dependencies, remote Python/NumPy inventories, or the MathJax CDN resource.
+build-system dependencies, or remote Python/NumPy inventories.
 
 ## Updating dependency pins
 
@@ -130,7 +130,8 @@ New public modules must be assigned to a reference group. Private helper modules
 excluded. The reference generator validates its explicit module inventory and source paths;
 it never imports optional solvers to decide what to publish. Public members render a fully
 typed signature even without prose; run `scripts/check_docstrings.py` to list the members
-that still lack a docstring.
+that still lack a docstring. CI passes `--max` with the current count, so the count cannot
+rise; lower that value in `.github/workflows/ci.yml` when you add docstrings.
 
 ## Examples and excerpts
 
@@ -162,5 +163,5 @@ light and dark themes. Check diagrams, horizontal table/code scrolling, navigati
 copy controls, heading hierarchy, and source-edit links.
 
 Use Material's existing components and a small stylesheet. Keep contrast and focus states
-readable. The CI artifact is useful for review; Read the Docs can host the same generated
-site using the [hosting configuration and setup procedure](hosting.md).
+readable. The CI artifact is useful for review; Read the Docs hosts the same generated
+site with the [hosting configuration and settings](hosting.md).

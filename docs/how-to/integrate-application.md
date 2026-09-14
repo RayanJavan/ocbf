@@ -1,7 +1,9 @@
-# Integrations
+# Integrate an application
 
 The application supplies structure, reports, interpretation contracts, and business
 references. OCBF supplies the reusable evidence/model/inference/query machinery.
+
+## Keep application responsibilities explicit
 
 | Application responsibility | OCBF boundary |
 |---|---|
@@ -12,8 +14,10 @@ references. OCBF supplies the reusable evidence/model/inference/query machinery.
 | Schedule, authorize, persist, and display | Invoke the synchronous facade and consume neutral results. |
 
 No database, Kafka, credentials, scheduler, or UI is required by the core contracts.
+Results are conditional on the declared model; numerical agreement cannot establish
+physical evidence accuracy.
 
-## Structural inputs
+## Supply structural inputs
 
 An external derivation tool can construct OCBF semantic values. The Mammut example's
 elastocel bridge consumes the existing structure derivation result; generic OCBF modules
@@ -22,5 +26,5 @@ do not import elastocel or factory storage.
 A missing candidate universe must be supplied explicitly. A source interpreter cannot
 repair an absent semantic binding by inventing a likely production identity.
 
-See the [Mammut example](mammut.md) for its actual admission boundary and
-[extension contracts](../development/extensions.md) for reusable implementations.
+See the [Mammut example](mammut-retrospective.md) for its actual admission boundary and
+[extension contracts](extend.md) for reusable implementations.
