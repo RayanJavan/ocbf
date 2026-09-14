@@ -58,14 +58,14 @@ identity bindings before it can produce a retained-data assessment.
 ## Develop
 
 ```bash
-python -m pip install -e ".[dev,docs]"
+python -m pip install -e ".[dev]"
 python -m pytest -q
-python scripts/check_docs.py
-python -m mkdocs build --strict
-python scripts/check_docs.py --site-dir site
-python -m mkdocs serve
 ```
 
-The built site includes the generated API reference. CI runs the library checks and
-documentation build separately and uploads the `ocbf-site` artifact. See the
-[development guide](docs/development/index.md) for validation and contribution rules.
+For documentation, use the pinned environment and PowerShell or POSIX commands in
+[documentation maintenance](docs/development/documentation.md#documentation-environment).
+MkDocs, Material, and mkdocstrings build the guides and generated API reference together.
+CI checks that site separately from the library suite and uploads the `ocbf-site` artifact.
+The [hosting guide](docs/development/hosting.md) describes how to connect this same build
+to Read the Docs Community. See the [development guide](docs/development/index.md) for
+validation and contribution rules.

@@ -2,18 +2,19 @@
 
 import argparse
 import ast
-from html.parser import HTMLParser
 import json
-from pathlib import Path
 import re
 import runpy
 import subprocess
 import sys
 import tempfile
 import textwrap
+from html.parser import HTMLParser
+from pathlib import Path
 from urllib.parse import unquote, urljoin, urlsplit
 
 import yaml
+from mkdocs.config import load_config
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
@@ -218,7 +219,8 @@ class PageLinks(HTMLParser):
 
 def check_site_links(directory):
     directory = directory.resolve()
-    config = yaml.load((ROOT / "mkdocs.yml").read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    # Use MkDocs' resolved configuration, including !ENV, for the URL seen by the build.
+    config = load_config(config_file=str(ROOT / "mkdocs.yml"))
     base_path = urlsplit(config["site_url"]).path
     pages = {
         path.resolve(): PageLinks(path.read_text(encoding="utf-8"))

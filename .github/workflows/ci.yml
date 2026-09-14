@@ -46,7 +46,7 @@ jobs:
 
   docs:
     name: Documentation build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -55,18 +55,25 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: pyproject.toml
+          cache-dependency-path: |
+            pyproject.toml
+            requirements/docs.txt
 
       # Install the library and source-inspection documentation toolchain together.
-      - name: Install
-        run: python -m pip install --upgrade pip && python -m pip install -e ".[docs]"
+      - name: Install documentation dependencies
+        run: |
+          python -m pip install -r requirements/docs.txt -e ".[docs]"
+          python -m pip check
+
+      - name: Check documentation URL handling
+        run: python -m unittest discover -s scripts/tests -v
 
       - name: Check documentation sources and examples
         run: python scripts/check_docs.py
 
       # Strict mode promotes broken navigation, links and reference warnings to failures.
       - name: Build site
-        run: mkdocs build --strict
+        run: python -m mkdocs build --strict
         # Suppresses a long unsolicited advisory the mkdocs-material build prints.
         env:
           DISABLE_MKDOCS_2_WARNING: "true"
