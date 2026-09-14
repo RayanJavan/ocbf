@@ -9,6 +9,6 @@ from the explicitly documented modules.
 - [Glossary](glossary.md): consistent terminology.
 - [API reference](api/index.md): callable contracts grouped by responsibility.
 
-The API navigation leads with the facade and scientific contracts. Numerical utilities are
-grouped separately because a low-level marginal interface does not imply a process-query
-capability.
+The API navigation has two tiers. **Workflow and contracts** leads with the facade and the
+scientific contracts. **Numerical and source utilities** are grouped separately because a
+low-level marginal interface does not imply a process-query capability.
