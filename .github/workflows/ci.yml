@@ -71,6 +71,10 @@ jobs:
       - name: Check documentation sources and examples
         run: python scripts/check_docs.py
 
+      # Ratchet: lower --max when docstrings are added; never raise it.
+      - name: Check undocumented public members
+        run: python scripts/check_docstrings.py --max 339
+
       # Strict mode promotes broken navigation, links and reference warnings to failures.
       - name: Build site
         run: python -m mkdocs build --strict

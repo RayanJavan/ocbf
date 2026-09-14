@@ -130,7 +130,8 @@ New public modules must be assigned to a reference group. Private helper modules
 excluded. The reference generator validates its explicit module inventory and source paths;
 it never imports optional solvers to decide what to publish. Public members render a fully
 typed signature even without prose; run `scripts/check_docstrings.py` to list the members
-that still lack a docstring.
+that still lack a docstring. CI passes `--max` with the current count, so the count cannot
+rise; lower that value in `.github/workflows/ci.yml` when you add docstrings.
 
 ## Examples and excerpts
 

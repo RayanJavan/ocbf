@@ -24,6 +24,7 @@ failure automatically.
 python -m pip check
 python -m unittest discover -s scripts/tests -v
 python scripts/check_docs.py
+python scripts/check_docstrings.py
 python -m mkdocs build --strict
 python scripts/check_docs.py --site-dir site
 ```
