@@ -34,7 +34,13 @@ Missing and ambiguous assignments fail. Inference never resolves missing trust b
 The [parameter topic](../concepts/parameters.md#resolution-and-provenance) explains what
 the resolved values represent; the [trust guide](../how-to/configure-trust.md) shows the calls.
 
-`ExecutionSession` owns a bounded in-memory store. `ExecutionControl` supplies a cooperative
+`ExecutionSession` owns a bounded in-memory store. Its required `max_cache_bytes` may be
+zero and bounds retained cache entries, including conservative container and array charges.
+Entries that cannot be frozen or accounted for, or are larger than the budget, compute
+without caching. Eviction and session closure release session references; results already
+held by callers remain usable. Session statistics are cumulative.
+
+`ExecutionControl` supplies a cooperative
 deadline, cancellation callback, progress callback, and workspace estimate budget.
 A shared control's deadline spans the calls using it. Native calls are checked at their
 boundaries; they cannot be interrupted midway by this mechanism.

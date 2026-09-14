@@ -27,8 +27,7 @@ Reuse is transparent to scientific meaning: a fresh calculation and a reused cal
 address the same target. Unknown extension dependencies can cause work to run afresh.
 
 Closing the session releases its stored references. An inference result or query result
-still held by the application remains available. Session cache accounting describes
-retained cache entries, not all process memory.
+still held by the application remains available.
 
 ## Sampling after a revision
 
@@ -45,9 +44,8 @@ instead of reusing old assignments.
 declared workspace checks. A deadline shared across calls spans those calls. A native
 operation may be checked only before and after its execution.
 
-A stop before usable output produces a typed failure. When usable partial output exists,
-it retains its incomplete execution status and numerical qualifications. Missing query
-answers are not filled with zero.
+A stop never turns an unfinished calculation into a complete answer; see
+[incomplete execution](../reference/results.md#incomplete-execution) for the status rules.
 
 ## Replay and retention
 

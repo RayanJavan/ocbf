@@ -60,10 +60,15 @@ causal delay, or additive attribution shares.
 
 ## Incomplete execution
 
-Execution status is `complete`, `cancelled`, `resource-exhausted`, or `failed`.
-Before usable output, a typed failure carries the assessment. Usable partial chains retain
-their numerical qualifications. Partial query bundles identify missing queries rather than
-filling them with zero.
+Execution status is `complete`, `cancelled`, `resource-exhausted`, or `failed`, separate
+from numerical quality and evidence limitations. No runtime stop selects another solver.
+
+- Before usable output exists, a typed failure carries the assessment in `.execution`;
+  unexpected implementation errors become `ExecutionFailure` with their original cause.
+- Unfinished normalization never returns an exact posterior.
+- Usable partial chains retain their incomplete status and numerical qualifications.
+- A partial query bundle lists completed and missing queries in `answer.execution.details`;
+  missing answers are never replaced with zero.
 
 ## Interchange and retention
 

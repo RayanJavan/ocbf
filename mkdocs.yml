@@ -25,6 +25,7 @@ nav:
       - getting-started/index.md
       - Installation: getting-started/installation.md
       - First assessment: getting-started/quickstart.md
+      - Example studies: getting-started/examples.md
   - Concepts:
       - concepts/index.md
       - Semantic context: concepts/semantics.md

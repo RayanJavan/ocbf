@@ -41,13 +41,10 @@ No root logger configuration, printing, thread pool or scheduling service is ins
 
 ## Read the execution status
 
-Execution status is `complete`, `cancelled`, `resource-exhausted` or `failed`, separate
-from numerical quality and evidence limitations. No runtime stop selects another solver.
-Before usable output exists, a typed failure carries `.execution`; unexpected implementation
-errors become `ExecutionFailure` with their original cause. Unfinished normalization never
-returns an exact posterior. Usable partial chains retain their incomplete status and
-numerical qualifications. A partial query bundle lists completed and missing queries in
-`answer.execution.details`; missing answers are never replaced with zero.
+Print `result.execution.status` on success, or `error.execution` when a typed failure is
+raised before usable output. For a query bundle, inspect `answer.execution.details` to see
+which queries completed.
 
-See [configuration and errors](../reference/configuration.md) for failure types and
-[results](../reference/results.md#incomplete-execution) for incomplete output.
+See [results](../reference/results.md#incomplete-execution) for the status values and
+partial-output rules, and [configuration and errors](../reference/configuration.md#typed-failures)
+for failure types.

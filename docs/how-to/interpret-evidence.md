@@ -12,7 +12,7 @@ An observation identifies its source, assertion family, observation channel, sco
 value, evidence revisions, interpretation identity, and information group. Its channel
 determines how alternative truths could generate that report.
 
-The [quickstart interpreter](../getting-started/quickstart.md#3-interpret-versioned-reports)
+The [quickstart interpreter](../getting-started/quickstart.md#interpret-versioned-reports)
 is a complete synthetic example.
 
 ## Materialize and inspect

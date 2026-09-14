@@ -2,7 +2,7 @@
 
 Use a caller-owned session when comparing manual trust settings or asking several questions
 of one posterior. Reuse preserves the declared target, evidence lineage and common draws.
-See [validation workloads](../development/validation.md#executable-workloads) for reproducible comparisons.
+See the [example studies](../getting-started/examples.md) for reproducible comparisons.
 
 ## Open a session and compare settings
 
@@ -34,11 +34,10 @@ with ExecutionSession(max_cache_bytes=64 * 1024 * 1024, policy=policy) as sessio
     print(session.last_assessment)
 ```
 
-The byte budget is required and may be zero. It bounds retained cache entries, including
-conservative container and array charges. Entries that cannot be frozen or accounted for,
-or are larger than the budget, compute without caching. Eviction and session closure release
-session references; results already held by callers remain usable. Sessions are intended
-for one synchronous caller. `cancel()` may be signalled from another thread.
+The byte budget is required and may be zero; see
+[configuration](../reference/configuration.md#parameters-and-controls) for what it counts.
+Sessions are intended for one synchronous caller. `cancel()` may be signalled from another
+thread.
 
 The optional session policy is a workflow default. An explicit `policy=` on `infer`,
 `plan_inference` or `compare_settings` overrides it. With no session policy, the
