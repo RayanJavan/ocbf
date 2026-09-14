@@ -63,10 +63,7 @@ This is a backend-loading requirement, not a GPU capability of OCBF.
 
 ## Build the documentation
 
-```bash
-python -m pip install -e ".[docs]"
-python -m mkdocs serve
-```
-
 The API reference is generated at build time from the documented public modules.
+Follow [documentation maintenance](../development/documentation.md#documentation-environment)
+to install the pinned environment and preview the site in PowerShell or a POSIX shell.
 Use the [development checks](../development/validation.md) when changing the library.

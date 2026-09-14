@@ -2,11 +2,11 @@ site_name: OCBF
 site_description: >-
   Object-Centric Belief Fusion: versioned evidence, explicit probability models,
   and uncertainty-aware process queries.
-site_url: https://rayanjavan.github.io/ocbf/
+# Optional host-independent override, then RTD's version URL, then local preview.
+site_url: !ENV [DOCS_SITE_URL, READTHEDOCS_CANONICAL_URL, "http://127.0.0.1:8000/"]
 repo_url: https://github.com/RayanJavan/ocbf
 repo_name: RayanJavan/ocbf
 edit_uri: edit/main/docs/
-# The absolute base supports generated links; CI delivers the site as an artifact.
 validation:
   nav:
     omitted_files: warn
@@ -59,6 +59,7 @@ nav:
       - Extensions: development/extensions.md
       - Validation: development/validation.md
       - Documentation maintenance: development/documentation.md
+      - Documentation hosting: development/hosting.md
 
 theme:
   name: material
