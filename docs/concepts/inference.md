@@ -1,102 +1,220 @@
 # Inference and posteriors
 
-Inference computes a posterior for one compiled model. The posterior describes uncertainty
-over the model's possible histories. Its representation determines which questions can
-be answered from the result.
+The [model](model.md) lists the possible histories and how each observation weighs them.
+**Inference** computes the **posterior**: the probability of each history, given all the evidence
+and parameters. Different engines store the posterior in different forms, and each form can answer
+different questions. This page therefore starts from the question.
+
+## Choose the question first
+
+The duration question has to read the start link and the end links *together*. A result that only
+stored a separate probability for each link could not answer it. A calculation therefore starts by
+declaring its **requirements**:
+
+- the groups of assertions whose **joint distribution** is needed, meaning the probability of every
+  combination of their values;
+- the operations the result must support.
+
+```python
+from ocbf.api import plan_inference
+from ocbf.belief.posterior import QueryRequirements
+from ocbf.inference.contracts import ExecutionPlan
+
+requirements: QueryRequirements = QueryRequirements(
+    scopes=((links["short"], links["long"]),),  # (1)!
+    capabilities=("marginal", "joint"),  # (2)!
+)
+policy: InferencePolicy = InferencePolicy(engine="reference_elimination")  # (3)!
+plan: ExecutionPlan = plan_inference(model, requirements=requirements, policy=policy)
+print(plan.engine, plan.capabilities)
+```
+
+1.  One group of assertions whose combinations must be available together: the two end links.
+2.  The operations the result must provide: probability tables for single assertions (`marginal`)
+    and for groups of assertions (`joint`).
+3.  An exact engine that needs only OCBF's core dependencies. Without a policy, OCBF uses
+    `gtsam_exact`. With `engine="auto"`, OCBF picks the first engine that meets the requirements.
+
+Running the block prints:
+
+```text
+reference_elimination ('marginal', 'joint', 'expectation', 'normalizer', 'joint_draws')
+```
+
+The **plan** names the engine that will run and the operations its result will support. This engine
+supports more than was requested: it can also compute expected values (`expectation`), the total
+weight of all histories before normalizing (`normalizer`), and random samples of complete
+histories (`joint_draws`). Planning never changes the evidence or fills in missing parameters. On
+the queries page, `requirements_for` works out the requirements from the questions themselves.
 
 ## Marginals and joint histories
 
-A marginal concerns one variable, such as whether an end event belongs to an Operation.
-A joint describes related variables together.
-
-As a separate illustration, consider two endpoint associations with a probability of one
-half each. Those marginal values alone do not say whether the associations always occur
-together, are independent,
-or are mutually exclusive. A duration or conformance question can distinguish these cases.
-The introductory model explicitly makes its two end associations mutually exclusive;
-that constraint supplies information beyond their individual marginal probabilities.
-
-OCBF's process queries therefore declare their required joint scopes through
-`QueryRequirements`. The requirements concern the information needed by the question,
-not just a preferred algorithm.
-
-The introductory model makes this concrete. Requesting the joint over its two end
-associations shows the exclusivity that the separate marginals cannot:
+A **marginal** is the probability distribution of one assertion. A **joint** is the distribution of
+several assertions together:
 
 ```python
-from examples.fixed_parameters import example_inputs
-from ocbf.api import compile_model, infer
-from ocbf.assertions import AssertionRef
-from ocbf.belief.posterior import QueryRequirements
-from ocbf.inference.contracts import InferencePolicy
+from ocbf.api import infer
+from ocbf.belief.posterior import InferenceResult, JointTable
 
-spec, queries, settings, records = example_inputs()
-short = str(AssertionRef.e2o("short", "subject", "op"))
-long = str(AssertionRef.e2o("long", "subject", "op"))
-result = infer(
-    compile_model(spec),
-    requirements=QueryRequirements(scopes=((short, long),), capabilities=("marginal", "joint")),
-    policy=InferencePolicy(engine="reference_elimination"),
-)
-joint = result.posterior.joint((short, long)).probabilities
-print("P(short end):", round(float(joint[1].sum()), 4))
-print("P(long end):", round(float(joint[:, 1].sum()), 4))
-print("P(both ends):", round(float(joint[1, 1]), 4))
+result: InferenceResult = infer(model, requirements=requirements, policy=policy)
+for event in ("start", "short", "long"):
+    linked: JointTable = result.posterior.marginal(links[event])  # (1)!
+    print(f"P({event} linked) = {float(linked.probabilities[1]):.4f}")
+ends: JointTable = result.posterior.joint((links["short"], links["long"]))  # (2)!
+print(f"P(both ends linked) = {float(ends.probabilities[1, 1]):.4f}")
 ```
+
+1.  A table with one probability for each value of the assertion: index 0 is `False`, index 1 is
+    `True`.
+2.  A table with one axis per assertion, in the order given, so `[1, 1]` is "both true".
+
+Running the block prints:
 
 ```text
-P(short end): 0.425
-P(long end): 0.425
-P(both ends): 0.0
+P(start linked) = 0.7391
+P(short linked) = 0.4250
+P(long linked) = 0.4250
+P(both ends linked) = 0.0000
 ```
 
-Each end association is individually plausible, yet the joint probability of both is zero:
-the exclusivity constraint lives in their joint, not in either marginal.
+Each end link has a probability of 0.425, yet the two are never true together. The marginals
+alone cannot show that. Two marginals of 0.425 would fit ends that always occur together, ends that
+are unrelated, and ends that never occur together, and the duration question has a different answer
+in each case. Only the joint shows which of these holds.
+
+!!! note "Keep in mind"
+
+    Two links can each be plausible and still be impossible together. Answer questions about
+    histories from joints or from sampled complete histories, never from a list of separate
+    probabilities.
+
+## How plausible each history is
+
+The joint over all three links gives the probability of each history class from the
+[model page](model.md#possible-histories):
+
+```python
+from itertools import product
+
+link_joint: JointTable = result.posterior.joint(
+    (links["start"], links["short"], links["long"])
+)
+
+
+def history_class(start: bool, short: bool, long: bool) -> str:
+    if short and long:
+        return "two ends (impossible)"
+    if not start:
+        return "start not linked"
+    if short:
+        return "closed after 15 min"
+    return "closed after 60 min" if long else "open at 12:00"
+
+
+classes: dict[str, float] = {}
+for start, short, long in product((False, True), repeat=3):  # (1)!
+    label: str = history_class(start, short, long)
+    index: tuple[int, int, int] = (int(start), int(short), int(long))
+    classes[label] = classes.get(label, 0.0) + float(link_joint.probabilities[index])
+for label, probability in classes.items():
+    print(f"{label:<22} {probability:.4f}")
+```
+
+1.  All eight combinations of the three links, added up into the history classes of the model page.
+
+Running the block prints:
+
+```text
+start not linked       0.2609
+two ends (impossible)  0.0000
+open at 12:00          0.1109
+closed after 60 min    0.3141
+closed after 15 min    0.3141
+```
+
+This is what the duration question will read:
+
+- The two closed histories are equally likely. The two end reports have the same trust values, and
+  nothing else favors either one.
+- In about 11% of the probability, `op` started but neither end belongs to it.
+- In about 26%, the start event is not linked to `op`, for example because the start report was
+  false.
+- The impossible history has a probability of exactly zero.
 
 ## Posterior representations
 
-A finite exact calculation retains enough conditional information to answer supported
-joint questions or draw complete assignments. It can resolve the small synthetic endpoint
-assessment without sampling error.
+The result above is exact: it stores probability tables. A sampling engine stores something else,
+a large set of complete histories drawn at random from the posterior:
 
-A sampled posterior retains a collection of joint assignments. Each assignment represents
-one coherent possible history. Related queries can use the same histories, including
-shared source modes and endpoint choices.
+```python
+import numpy as np
 
-A bounded hybrid calculation combines finite alternatives with supported continuous
-Gaussian quantities. For example, an end association can be uncertain alongside its
-timestamp. Supported continuous parts are integrated and reconstructed jointly when
-histories are drawn.
+from ocbf.inference.contracts import SamplingConfig
 
-Approximate marginal adapters have a narrower role. BP provides admitted finite marginal
-tables; the separate caller-grounded EP interface provides Gaussian marginal moments.
-Those summaries do not automatically supply complete process histories.
+sampled: InferenceResult = infer(
+    model,
+    requirements=QueryRequirements(
+        scopes=(tuple(links.values()),), capabilities=("joint_draws",)  # (1)!
+    ),
+    policy=InferencePolicy(
+        engine="blocked", sampling=SamplingConfig(chains=2, warmup=200, draws=1000)  # (2)!
+    ),
+    rng=np.random.default_rng(1),  # (3)!
+)
+for label, inferred in (("exact", result), ("sampled", sampled)):
+    print(f"{label:<8} {inferred.computation:<24} {inferred.capabilities}")
+```
 
-The [capability reference](../reference/capabilities.md#inference-routes) defines the exact
-engine restrictions and supported operations.
+1.  **[Joint draws](../reference/glossary.md)**: complete histories drawn at random, with a value
+    for every assertion.
+2.  A Markov chain Monte Carlo sampler with a deliberately small configuration: 2 chains, each
+    discarding 200 initial steps (warmup) and then keeping 1,000 histories.
+3.  The random number generator is passed explicitly, so the same seed reproduces the same draws.
 
-## Plans, policies, and results
+Running the block prints:
 
-| Object | Meaning |
-|---|---|
-| `QueryRequirements` | The scopes and posterior operations needed by a query bundle. |
-| `InferencePolicy` | Engine selection, numerical settings, and planning budgets. |
-| Execution plan | The admitted route, its representation, and assessed costs. |
-| `InferenceResult` | The posterior, capabilities, identities, diagnostics, and computation qualifications. |
+```text
+exact    exact-on-finite-model    ('marginal', 'joint', 'expectation', 'normalizer', 'joint_draws')
+sampled  mcmc-on-declared-target  ('joint_draws',)
+```
 
-The policy default is `gtsam_exact`. The quickstart explicitly selects
-`reference_elimination` so it needs only core dependencies. Automatic routing is opt-in;
-it assesses supported routes without changing evidence or fitting missing parameters.
+The exact result computes marginals, joints, and expected values without sampling error, and it
+can also draw histories. The sampled result offers only its draws. Each draw is one complete
+history, so two quantities computed from the same draws, such as a duration and a count, always
+describe the same histories. There is, however, no exact probability table to read.
 
-## Sampling behavior
+Other engines exist as well. The hybrid engine also handles uncertain numeric values, such as a
+timestamp with a normally distributed error. The approximate engines return only marginals, so they
+cannot answer questions that need joints. The
+[capability reference](../reference/capabilities.md#inference-routes) lists every engine and what
+it supports.
 
-Sampling separates warmup from retained draws and uses explicit random streams.
-Increasing draws may improve precision, but a chain that rarely moves between plausible
-histories can remain misleadingly concentrated. Numerical assessments describe the
-reported quantity and its sampled behavior.
+## Numerical qualifications
 
-Two sample runs can produce slightly different estimates for the same model. Two exact
-runs on the same supported target should agree within numerical precision.
-Neither agreement nor convergence establishes the physical accuracy of the source reports.
+Every result states how its numbers were computed. `computation` names the kind of number, for
+example `exact-on-finite-model`. `diagnostics` holds checks specific to the engine, such as sampler
+convergence statistics.
 
-The [joint-inference guide](../how-to/joint-inference.md) contains executable examples.
+Exact runs on the same model agree to floating-point precision. Sampled runs with different seeds
+give slightly different estimates. The **[MCSE](../reference/glossary.md)** (Monte Carlo standard
+error) of an estimate tells you how large that difference is expected to be;
+[Queries and result meaning](queries.md#different-sources-of-uncertainty) shows it for the duration
+question.
+
+More draws make a sampled estimate more precise. A sampler that stays stuck near some histories,
+for example one that almost always draws `short` as the end, can still report a small MCSE while
+missing `long`. Neither agreement between runs nor convergence says anything about whether the
+reports themselves are accurate.
+
+## Summary
+
+- Questions about histories need joint probabilities. Requirements declare which ones, and the plan
+  names an engine that can provide them.
+- The posterior gives each history class a probability: about 31% closed after 15 minutes, 31%
+  closed after 60, 11% open at 12:00, and 26% with the start not linked to `op`.
+- The posterior's form, exact tables or sampled histories, decides which questions a result can
+  answer and whether its numbers carry sampling error.
+
+Next, [Queries and result meaning](queries.md) turns these probabilities into answers about `op`.
+For procedures, see [choose inference](../how-to/choose-inference.md) and
+[use joint inference](../how-to/joint-inference.md).

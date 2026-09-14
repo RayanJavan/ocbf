@@ -141,7 +141,9 @@ integration-specific data access.
 
 Tutorial construction excerpts use named source regions. Interactive examples with complete
 setup are exercised by the documentation checks; construction fragments are labeled as
-sketches or source excerpts.
+sketches or source excerpts. Concepts pages build one typed running example across pages, and
+the checks run their blocks as a single program in navigation order. A name defined on one
+Concepts page must keep its meaning on every later page.
 
 ## Page and build checks
 

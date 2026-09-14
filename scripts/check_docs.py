@@ -111,10 +111,10 @@ def check_examples():
         "how-to/warm-start.md",
         "how-to/bound-execution.md",
         "reference/configuration.md",
-        "concepts/semantics.md",
-        "concepts/parameters.md",
-        "concepts/inference.md",
     )
+    # Concepts pages build one running example, so their blocks run as one program in nav order.
+    config = yaml.load((ROOT / "mkdocs.yml").read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    concepts = [page for page in nav_pages(config["nav"]) if page.startswith("concepts/")]
     quickstart = python_blocks(DOCS / scripts[0])[0]
     with tempfile.TemporaryDirectory(prefix="ocbf-doc-examples-") as temporary:
         prelude = (
@@ -129,9 +129,17 @@ def check_examples():
             text=True,
             timeout=120,
         )
-        for relative in (*scripts, "how-to/export-replay.md"):
-            blocks = python_blocks(DOCS / relative)
-            program = "\n\n".join(blocks)
+        programs = [
+            (relative, "\n\n".join(python_blocks(DOCS / relative)))
+            for relative in (*scripts, "how-to/export-replay.md")
+        ]
+        programs.append(
+            (
+                "concepts sequence",
+                "\n\n".join("\n\n".join(python_blocks(DOCS / page)) for page in concepts),
+            )
+        )
+        for relative, program in programs:
             if relative == "how-to/export-replay.md":
                 program = quickstart + "\n\n" + program
             source = f"import sys\nsys.path.insert(0, {str(ROOT)!r})\n" + program

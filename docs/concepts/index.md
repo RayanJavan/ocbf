@@ -1,67 +1,94 @@
 # Concepts
 
-OCBF assesses possible object-centric histories under supplied evidence and assumptions.
-For example, reports can leave several plausible endpoint associations for an Operation.
-A duration query then accounts for those alternatives instead of choosing one silently.
+OCBF works out which histories of a process are plausible, given reports that may be incomplete,
+conflicting, or wrong. A history here is **object-centric**: it says which events happened and
+which objects, such as an Operation, each event belongs to. OCBF does not pick one history. It
+gives each possible history a probability and answers questions about the process, such as "did
+this Operation take too long?", from all of them.
 
+These pages walk through the library with one small example. Each page explains one idea, shows
+the Python objects that represent it, and adds the next piece of the example.
 New term? See the [glossary](../reference/glossary.md).
 
-## From reports to an answer
+## The running example
 
-| Step | You supply | OCBF produces |
-|---|---|---|
-| [Define the context](semantics.md) | Fixed schema, candidate events and objects, semantic bindings | An immutable semantic context with stable assertion identities. |
-| [Prepare evidence](evidence.md) | Versioned report envelopes, a knowledge cutoff, local interpreters | An effective snapshot, interpreted observations, and admission issues. |
-| [Resolve trust](parameters.md) | Manual channel values, their origins, priors, and dependence assumptions | Explicit parameter values held fixed during inference. |
-| [Compile the model](model.md) | Context, observations, parameters, support, and decoding | A canonical probability model with scientific identity and lineage. |
-| [Plan and infer](inference.md) | Query requirements, an engine policy, budgets, and any required RNG | A posterior with declared capabilities and numerical qualifications. |
-| [Evaluate questions](queries.md) | A query bundle with population, time scope, and normative reference | Estimates with denominators, unresolved outcomes, and evidence qualifications. |
+An Operation `op` in a synthetic Job has one reported start and two reported ends. The two end
+reports cannot both be right, and any report might be false.
 
-The [first assessment](../getting-started/quickstart.md) runs this complete sequence with
-synthetic evidence and core dependencies. Your application owns source access, persistence,
-candidate construction, and presentation; see the
-[integration boundary](../how-to/integrate-application.md).
+| Time (UTC) | Report |
+|---|---|
+| 10:00 | `op` started (event `start`) |
+| 10:15 | `op` ended (event `short`) |
+| 11:00 | `op` ended (event `long`) |
+| 12:00 | The assessment is made; nothing later is known |
+
+The question is: **did `op` take longer than a 30-minute reference?** No single report settles
+it:
+
+- If `short` is the real end, `op` took 15 minutes.
+- If `long` is, it took 60.
+- If neither end belongs to `op`, it may still be running at 12:00.
+- If the start report is false, the question may not apply at all.
+
+OCBF computes a probability for each of these histories and answers the question from all of them.
+The [first assessment](../getting-started/quickstart.md) runs this same example as one script,
+`examples/fixed_parameters.py`. These pages build it step by step, so that you can see each part.
+
+## How the pieces fit
+
+<div class="diagram-scroll" markdown tabindex="0" role="region" aria-label="Library objects from schema to query results; scroll horizontally to read all nodes">
+
+```mermaid
+flowchart LR
+    S["Schema + candidates"] -->|from_universe| C["SemanticContext"]
+    R["EvidenceRecord"] -->|prepare_evidence| E["InterpretedEvidence"]
+    C --> E
+    E -->|resolve_parameters| P["ParameterSet"]
+    C & E & P --> M["ModelSpec"]
+    M -->|compile_model| CM["CompiledModel"]
+    CM -->|infer| I["InferenceResult"]
+    I -->|evaluate| A["QueryResults"]
+    Q["QueryBundle"] --> A
+```
+
+</div>
+
+Boxes are the Python objects, and arrow labels are the functions that create them. Read the pages
+in this order:
+
+1. [Semantic context](semantics.md): *what can be true?* The event and object types, the candidate
+   events, and the true-or-false facts about them.
+2. [Evidence and observations](evidence.md): *what was reported, and what does it mean?* Stored
+   reports, the interpreters that read them, and corrections.
+3. [Parameters and trust](parameters.md): *how much should a report count?* How reliably a source
+   reports, stated through explicit rules.
+4. [Models and constraints](model.md): *which histories are possible?* The rules and weights that
+   connect the facts.
+5. [Inference and posteriors](inference.md): *how plausible is each history?* Computing the
+   probabilities, and what the result can answer.
+6. [Queries and result meaning](queries.md): *what does that say about the question?* Stating the
+   question and reading the answer.
+7. [Revisions and execution](execution.md): *what happens when something changes?* Which changes
+   need a new calculation, and how work is reused and kept.
+
+OCBF does not fetch reports, store results, or decide which candidates exist; your application
+does. See the [integration boundary](../how-to/integrate-application.md).
 
 ## Choose the question before the calculation
 
-Duration exceptions, whole-Job conformance, descriptive exposure, and priority distributions
-can require dependencies across events and objects. Declare those query requirements before
-selecting a posterior representation. A set of individual probabilities may not contain
-enough information to answer a question about one joint history.
+The probabilities that "`short` belongs to `op`" and that "`long` belongs to `op`", taken
+separately, cannot answer the duration question. The question needs to know which start and which
+end belong to `op` *in the same history*. Before computing anything, OCBF therefore asks which
+combinations of facts the question needs;
+[Inference and posteriors](inference.md#choose-the-question-first) shows how.
 
-See [capabilities](../reference/capabilities.md) for the supported query/engine combinations
-and [inference selection](../how-to/choose-inference.md) for the procedure.
+## Following the examples
 
-## Core components
+!!! note "Run the blocks in order"
 
-- **[Semantic context](semantics.md)** describes the types and candidates in an assessment.
-  A `Schema` defines event/object meanings, a `Universe` contains particular candidates,
-  and stable assertions identify facts such as an event's association with an Operation.
-- **[Evidence and observations](evidence.md)** retain what sources reported and what those
-  reports mean. Records carry provenance and revisions; interpreters produce observations
-  and admission issues without silently deciding the underlying truth.
-- **[Parameters and trust](parameters.md)** supply the observation-channel values, priors,
-  and assumptions used by the model. A `ParameterSet` records the resolved values and their
-  origins, making alternative manual settings reproducible.
-- **[Models and constraints](model.md)** describe possible histories and their relationships.
-  Compilation combines context, observations, and parameters into a `CompiledModel`;
-  hard constraints exclude histories while evidence distinguishes the remaining ones.
-- **[Inference and posteriors](inference.md)** calculate uncertainty over those histories.
-  An `InferenceResult` retains a posterior with declared operations, such as individual
-  marginals or joint draws, together with its numerical qualifications.
-- **[Queries and result meaning](queries.md)** connect histories to process questions.
-  A `QueryBundle` supplies projections, populations, and references; an `Estimate` records
-  values, denominators, unresolved outcomes, and evidence qualifications.
+    The code on these pages forms one program. Each page reuses names defined on earlier pages,
+    so run the blocks in order, starting from [Semantic context](semantics.md), in one Python
+    session with OCBF installed. All reports, times, and trust values are synthetic.
 
-## Revise and repeat
-
-[Revisions and execution](execution.md) covers what happens when reports, parameters, or
-questions change. A corrected report or changed assumption creates a new scientific target;
-a changed query reference can reuse a sufficiently capable posterior. `ExecutionSession`
-provides bounded reuse across calls, `ExecutionControl` provides cooperative resource
-controls, and neutral exports support explicit replay.
-
-Examples refer to a synthetic Operation with one possible start and two alternative end
-reports, as used in the [first assessment](../getting-started/quickstart.md).
-[How-to guides](../how-to/index.md) contain procedures; the
-[reference](../reference/index.md) defines supported combinations and callable contracts.
+For step-by-step procedures, see the [how-to guides](../how-to/index.md). For complete rules and
+supported combinations, see the [reference](../reference/index.md).
