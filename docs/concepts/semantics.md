@@ -1,8 +1,8 @@
 # Semantic context
 
 A report such as "`op` ended at 10:15" only means something if OCBF knows what an Operation is,
-what an end event is, and which events could be involved. This page defines those things for the
-[running example](index.md#the-running-example). It also defines the **assertions**: the
+what an end event is, and which events could be involved. This page fixes those meanings for the
+[running example](index.md#the-running-example) and introduces the **assertions**, the
 true-or-false facts that every later page works with.
 
 ## Schema: fixed meanings
@@ -29,8 +29,8 @@ schema: Schema = Schema(
 2.  An event-to-object (E2O) relation: a `start` or `end` event can have an `Operation` as its
     `subject`, and `Multiplicity(0, 1)` allows at most one.
 
-The schema says what *can* be stated, not what happened. It does not change during an assessment:
-correcting a report never changes what an `end` event is.
+The schema says what *can* be stated, not what happened. It is also fixed for the whole
+assessment: a correction changes a report, and the meaning of an `end` event stays as declared.
 
 ## Universe: the candidates
 
@@ -86,12 +86,12 @@ long ('end',) +60 min
 The universe contains three candidate events before any report is read. Each candidate's allowed
 type is fixed. What remains uncertain is whether each event happened and whether it belongs to
 `op`. The context also gets an identifier computed from its contents, `context.context_id`. Models
-built from it store that identifier, so you can always tell which context a result came from.
+built from it store that identifier, and any result can be traced back to its context.
 
-!!! note "Keep in mind"
+!!! note "A candidate is not evidence"
 
-    A candidate is not evidence. The universe lists what *could* be part of the history. Reports,
-    and the probabilities computed from them, decide how plausible each candidate is.
+    The universe lists what *could* be part of the history. Reports, and the probabilities
+    computed from them, decide how plausible each candidate is.
 
 ## Assertions: what can be true or false
 
@@ -124,9 +124,9 @@ e2o(short, subject, op)
 
 These are two different facts. An end event can happen without belonging to `op`. A report can
 also show that an event happened without showing which Operation it belongs to. Observations,
-model variables, and query results all refer to assertions by these strings. A compiled model also
-numbers its variables internally, but those numbers can differ between calculations, so they never
-identify an assertion.
+model variables, and query results all refer to assertions by these strings. A compiled model
+numbers its variables internally as well, but those numbers can differ between calculations and
+never identify an assertion.
 
 ## Candidate boundaries
 
@@ -151,15 +151,15 @@ weigh an event named `third`. A report about `third` is rejected when the model 
 creates a different context with a different identifier, so results computed from the old context
 do not apply to it.
 
-An event with an unknown time is also different from an event that did not happen. Whether an event
-happened and when it happened are separate questions for the model.
+An event with an unknown time is different from an event that did not happen; the model treats
+*whether* an event happened and *when* as separate questions.
 
 ## Summary
 
-- The schema declares types and relations. The universe lists the candidate events and objects.
-  The semantic context combines both into one unmodifiable value with its own identifier.
-- Assertions such as `event_exists(short)` and `e2o(short, subject, op)` are the true-or-false
-  facts that each history decides. Every later object refers to them by the same strings.
-- OCBF never considers an event that is not a candidate.
+The schema fixes what can be stated, the universe lists the candidates (`start`, `short`, `long`,
+and `op`), and the semantic context holds both under one identifier, `context.context_id`. Each
+history decides the assertions, such as `event_exists(short)` and `e2o(short, subject, op)`, and
+every later object names them by these same strings. An event outside the universe, such as
+`third`, is outside every calculation.
 
 Next, [Evidence and observations](evidence.md) connects reports to these assertions.

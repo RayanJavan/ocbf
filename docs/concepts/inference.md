@@ -3,7 +3,7 @@
 The [model](model.md) lists the possible histories and how each observation weighs them.
 **Inference** computes the **posterior**: the probability of each history, given all the evidence
 and parameters. Different engines store the posterior in different forms, and each form can answer
-different questions. This page therefore starts from the question.
+different questions, which is why a calculation starts from the question.
 
 ## Choose the question first
 
@@ -82,11 +82,10 @@ alone cannot show that. Two marginals of 0.425 would fit ends that always occur 
 are unrelated, and ends that never occur together, and the duration question has a different answer
 in each case. Only the joint shows which of these holds.
 
-!!! note "Keep in mind"
+!!! note "Plausible separately, impossible together"
 
-    Two links can each be plausible and still be impossible together. Answer questions about
-    histories from joints or from sampled complete histories, never from a list of separate
-    probabilities.
+    Answer questions about histories from joints or from sampled complete histories, never from
+    a list of separate probabilities.
 
 ## How plausible each history is
 
@@ -183,11 +182,10 @@ can also draw histories. The sampled result offers only its draws. Each draw is 
 history, so two quantities computed from the same draws, such as a duration and a count, always
 describe the same histories. There is, however, no exact probability table to read.
 
-Other engines exist as well. The hybrid engine also handles uncertain numeric values, such as a
-timestamp with a normally distributed error. The approximate engines return only marginals, so they
-cannot answer questions that need joints. The
-[capability reference](../reference/capabilities.md#inference-routes) lists every engine and what
-it supports.
+The hybrid engine also handles uncertain numeric values, such as a timestamp with a normally
+distributed error. The approximate engines return only marginals, which rules out questions that
+need joints. The [capability reference](../reference/capabilities.md#inference-routes) lists every
+engine and what it supports.
 
 ## Numerical qualifications
 
@@ -212,8 +210,8 @@ reports themselves are accurate.
   names an engine that can provide them.
 - The posterior gives each history class a probability: about 31% closed after 15 minutes, 31%
   closed after 60, 11% open at 12:00, and 26% with the start not linked to `op`.
-- The posterior's form, exact tables or sampled histories, decides which questions a result can
-  answer and whether its numbers carry sampling error.
+- Exact tables and sampled histories answer different questions, and only the sampled numbers
+  carry sampling error.
 
 Next, [Queries and result meaning](queries.md) turns these probabilities into answers about `op`.
 For procedures, see [choose inference](../how-to/choose-inference.md) and

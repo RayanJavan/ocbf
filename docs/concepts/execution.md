@@ -2,7 +2,8 @@
 
 Real assessments change: a report is corrected, a trust value is revised, or a different reference
 is asked about. OCBF uses identifiers to tell which results still apply after a change, and it can
-reuse work that a change did not affect. This page uses the objects built on the previous pages.
+reuse work that a change did not affect. Below, the objects built on the previous pages change one
+at a time.
 
 ## Models and runs
 
@@ -56,7 +57,7 @@ corrected report, new model: True
 cautious trust, new model: True
 ```
 
-A change to the question alone needs no new model or inference. The existing posterior is simply
+A change to the question alone needs no new model or inference. The existing posterior is
 evaluated again:
 
 ```python
@@ -131,10 +132,9 @@ reused stored work: True
 same answers as without a session: True
 ```
 
-Reuse never changes an answer: a result from a session equals the result computed without one.
-When an input changes, for example a trust value, the work that depends on it is computed again.
-Closing the session releases what it stored. Results you still hold, such as `repeated`, remain
-usable.
+A result from a session equals the result computed without one. When an input changes, for
+example a trust value, the work that depends on it is computed again. Closing the session
+releases what it stored, and results you still hold, such as `repeated`, remain usable.
 
 ## Sampling after a revision
 
@@ -143,25 +143,23 @@ run, instead of from scratch. OCBF first checks that those histories are still p
 model. It then still discards warmup draws, and it runs one additional chain started independently
 for comparison.
 
-!!! note "Keep in mind"
+!!! note "A warm start is not evidence"
 
-    A **[warm start](../reference/glossary.md)** is not evidence. It only saves computation: the
-    earlier histories are a starting point for the sampler, and they add nothing to what the reports
-    say. When a change makes new histories possible, for example after a retraction, the sampler has
-    to start fresh.
+    The earlier histories are only a starting point for the sampler, and they add nothing to what
+    the reports say. When a change makes new histories possible, for example after a retraction,
+    the sampler has to start fresh.
 
 See [warm-start sampling](../how-to/warm-start.md) for the procedure.
 
 ## Controls and incomplete results
 
 `ExecutionControl` lets you set a deadline, cancel a calculation, receive progress callbacks, and
-check declared memory limits. OCBF checks these controls at fixed points during a calculation. An
-operation running inside a native library is therefore checked only before it starts and after it
+check declared memory limits. OCBF checks these controls at fixed points during a calculation, so
+an operation running inside a native library is checked only before it starts and after it
 finishes.
 
-A calculation that is stopped never returns a result that looks complete. Its status is
-`cancelled`, `resource-exhausted`, or `failed`, never `complete`. See
-[bound execution](../how-to/bound-execution.md) and the
+A stopped calculation reports its status as `cancelled`, `resource-exhausted`, or `failed`; only
+a finished one reports `complete`. See [bound execution](../how-to/bound-execution.md) and the
 [rules for incomplete execution](../reference/results.md#incomplete-execution).
 
 ## Replay and retention
@@ -202,12 +200,11 @@ again. See [export and replay](../how-to/export-replay.md).
 
 ## Summary
 
-- `model_id` identifies what is calculated, and `run_id` identifies one run. A change to evidence,
-  trust values, or candidates produces a new model; a change to the question only reuses the
-  posterior.
-- A session reuses work whose inputs have not changed, and it never changes an answer.
-- Warm starts, controls, and summaries change how work is done or kept. They never change what the
-  evidence says.
+`model_id` identifies what is calculated, and `run_id` identifies one run of it. Changed evidence,
+trust values, or candidates produce a new model and a new inference; a changed question only
+evaluates the existing posterior again. A session reuses work whose inputs have not changed, and
+warm starts, controls, and summaries change how work is done or kept, never what the evidence
+says.
 
 For procedures, see [reuse sessions](../how-to/reuse-sessions.md),
 [warm-start sampling](../how-to/warm-start.md), [bound execution](../how-to/bound-execution.md),

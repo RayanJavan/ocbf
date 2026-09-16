@@ -1,8 +1,8 @@
 # Queries and result meaning
 
 The [posterior](inference.md) gives each history a probability. A **query** turns those
-probabilities into an answer to a question about the process. This page states the duration
-question for `op`, evaluates it, and explains how to read the answer.
+probabilities into an answer to a question about the process. Here the duration question for `op`
+is stated and evaluated, and the rest of the page reads the answer field by field.
 
 ## Process projections
 
@@ -39,10 +39,10 @@ projection: ExecutionProjection = ExecutionProjection(
 5.  Both end candidates are listed. In each history at most one of them is linked to `op`, and the
     projection uses that one.
 
-The projection does not choose the most likely end. In each history, it reads whichever end is
-linked there: 15 minutes in some histories, 60 in others, and no end in others. The uncertainty
-about the end therefore carries through to the answer. A candidate event can also appear in more
-than one projection, for example as a possible end of two different Operations.
+The projection does not choose the most likely end. In each history it reads whichever end is
+linked there: 15 minutes in some histories, 60 in others, and no end in the rest. That
+uncertainty carries through to the answer. A candidate event can also appear in more than one
+projection, for example as a possible end of two different Operations.
 
 ## Process questions
 
@@ -111,9 +111,9 @@ provided as one of: (('joint',), ('joint_draws',))
 `requirements_for` works out what these questions need: the joint probabilities of all six start
 and end assertions, either as a table (`joint`) or as sampled histories (`joint_draws`). The exact
 result from the inference page was planned for only two of these assertions. Its engine can still
-compute the joint of any assertions of this small model when asked, so no second inference run is
-needed. Questions about a whole Job's conformance, and about ranking Jobs by priority, are shown in
-[use joint inference](../how-to/joint-inference.md).
+compute the joint of any assertions of this small model when asked, and no second inference run
+is needed. Questions about a whole Job's conformance, and about ranking Jobs by priority, are
+shown in [use joint inference](../how-to/joint-inference.md).
 
 ## Reading an estimate
 
@@ -145,8 +145,8 @@ status: assessed | computation: exact-on-finite-model
 
 Each field answers a different part of "what does 0.5 mean?":
 
-- `value` is the probability that `op` took longer than 30 minutes, counting **only the histories
-  in which that can be decided**.
+- `value` is the probability that `op` took longer than 30 minutes, counting only the histories
+  in which that can be decided.
 - `denominator` is the total probability of those histories, 0.6283. The value is a share of it.
 - `status` is `assessed` when a value was computed. Other statuses mark answers that could not be
   computed.
@@ -189,13 +189,13 @@ flowchart LR
 Each history class from the [inference page](inference.md#how-plausible-each-history-is) gets
 exactly one outcome:
 
-- **Closed after 15 minutes** is within the reference: *satisfied*.
-- **Closed after 60 minutes** exceeds it: *violated*.
+- **Closed after 15 minutes** is within the reference: `satisfied`.
+- **Closed after 60 minutes** exceeds it: `violated`.
 - **Open at 12:00** started 120 minutes before the horizon, which is already past 30 minutes, but
-  no end is linked to `op`. The duration is *unresolved*: it is neither zero nor within the
+  no end is linked to `op`. The duration is `unresolved`: it is neither zero nor within the
   reference.
-- **Start not linked** has no start for `op`, so the question is *inapplicable*.
-- *Pending* would be an open execution that is still within 30 minutes at the horizon. No history
+- **Start not linked** has no start for `op`, so the question is `inapplicable`.
+- `pending` would be an open execution that is still within 30 minutes at the horizon. No history
   here is pending.
 
 Only satisfied and violated histories enter the value. The denominator is their sum,
@@ -203,11 +203,11 @@ Only satisfied and violated histories enter the value. The denominator is their 
 probability is not counted as satisfied; it stays visible under `outcomes`. The
 [result reference](../reference/results.md#query-estimates) gives the complete rules.
 
-!!! note "Keep in mind"
+!!! note "Read the denominator before the value"
 
-    Read the denominator before the value. A value of 0.5 over a denominator of 0.6283 means: among
-    the histories in which the question can be decided, half exceed 30 minutes. It does not mean
-    that `op` exceeded 30 minutes with probability 0.5; that probability is 0.3141.
+    A value of 0.5 over a denominator of 0.6283 means: among the histories in which the question
+    can be decided, half exceed 30 minutes. It does not mean that `op` exceeded 30 minutes with
+    probability 0.5; that probability is 0.3141.
 
 ## Different sources of uncertainty
 
@@ -256,8 +256,8 @@ named manual-assumption sensitivity; no mixture weights implied
 ```
 
 With the weaker cautious reports, more probability goes to histories in which the question cannot
-be decided, so the denominator halves. The two ends still split what remains evenly, so the value
-stays 0.5.
+be decided, and the denominator halves. The two ends still split what remains evenly, which keeps
+the value at 0.5.
 
 | Kind of uncertainty | In this example | What reduces it |
 |---|---|---|
@@ -293,7 +293,7 @@ from 10:10 to 10:20:
 - In the 15-minute history, `op` runs from 10:00 to 10:15 and overlaps the interval for 5 minutes.
 - In the 60-minute history, it overlaps the whole 10 minutes.
 
-The two histories are equally likely, so the exposure is 7.5 minutes.
+The two histories are equally likely, and the exposure is 7.5 minutes.
 
 `evidence_ids` lists every input the estimate used: the three report revisions and the interval.
 It is a list of inputs, not a measure of how much each input caused the result. In the same way,
@@ -305,9 +305,10 @@ minutes.
 - An `ExecutionProjection` reads the execution of `op` from every history and keeps all start and
   end alternatives.
 - A `QuerySpec` states the question, its time window, and its reference. `evaluate` returns an
-  `Estimate` with a value, a denominator, and the probability of each outcome.
-- Read the denominator and the outcomes before the value. Keep posterior uncertainty, Monte Carlo
-  error, assumption sensitivity, and evidence limitations apart.
+  `Estimate` with a value, a denominator, and the probability of each outcome: here 0.5 over
+  0.6283, with the remaining 37% of the probability in `unresolved` and `inapplicable` histories.
+- Read the denominator and the outcomes before the value, and keep posterior uncertainty, Monte
+  Carlo error, assumption sensitivity, and evidence limitations apart.
 
 Next, [Revisions and execution](execution.md) shows what happens when the inputs or the question
 change. For procedures, see [evaluate queries](../how-to/evaluate-queries.md) and

@@ -32,3 +32,4 @@ output/playwright/
 *.swp
 .DS_Store
 Thumbs.db
+docnotes/

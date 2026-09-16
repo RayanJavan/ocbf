@@ -6,7 +6,7 @@ OCBF stores two things separately:
 - what a source *said*, kept exactly as received with its identifiers and times;
 - what that report *means* in terms of assertions.
 
-This page adds the three reports of the running example and turns them into observations.
+The three reports of the running example enter here, first as records and then as observations.
 
 ## Reports as evidence records
 
@@ -41,14 +41,14 @@ records: tuple[EvidenceRecord, ...] = tuple(
     assessment, 11:00. The time of the event itself is a different time, the validity time.
 
 A record is never modified after it is created. Results list the revision identifiers they used,
-such as `short:1`, so every number can be traced to the reports behind it.
+such as `short:1`, which traces every number to the reports behind it.
 
 ## Interpreters give reports meaning
 
 An **[interpreter](../reference/glossary.md)** reads a record and produces **observations**:
 statements about assertions in the semantic context. Each interpreter has a name and a version,
-and it is registered for one source and producer version. You can therefore always see which code
-gave a payload its meaning.
+and it is registered for one source and producer version. Every observation records which code
+gave the record's payload its meaning.
 
 ```python
 from dataclasses import dataclass
@@ -97,8 +97,8 @@ interpreters: dict[tuple[str, str], EvidenceInterpreter] = {
 3.  The **[observation channel](../reference/glossary.md)** says how a report depends on the truth
     of its scope; the next page gives it numbers. `conjunction` means one report about several
     assertions that are claimed to be true together.
-4.  The assertions the report is about, built from its payload: the event happened **and** belongs
-    to `op`. The interpreter does not check that these assertions exist in the context;
+4.  The assertions the report is about, built from its payload: the event both happened and
+    belongs to `op`. The interpreter does not check that these assertions exist in the context;
     compilation does, on the [model page](model.md#what-compilation-checks).
 5.  The revisions this observation was produced from.
 6.  The **[information group](../reference/glossary.md)**. Copies of the same underlying report get
@@ -110,9 +110,8 @@ interpreters: dict[tuple[str, str], EvidenceInterpreter] = {
     finds no interpreter.
 
 The interpreter decides what a report means, and nothing else. Here a positive endpoint report is
-one claim about two assertions together. It does not count as two separate votes, one for
-"happened" and one for "belongs to `op`". How much the report should count is decided on the next
-page, not here.
+one claim about two assertions together, not two separate votes, one for "happened" and one for
+"belongs to `op`". The next page decides how much that claim counts.
 
 ## Prepared evidence
 
@@ -171,8 +170,8 @@ Running the block prints:
 ```
 
 Version 2 of the producer might use the same fields differently, so the record produces no
-observation. The issue is kept in `issues`, so your application can show it or fix its cause, for
-example by registering an interpreter for version 2.
+observation. The issue stays in `issues`, where your application can show it or fix its cause,
+for example by registering an interpreter for version 2.
 
 ## Revisions and knowledge time
 
@@ -248,8 +247,8 @@ The same records give different evidence at different cutoffs:
   positive report does not return.
 - A second copy of a revision adds no observation.
 
-Every revision left out is listed as an issue with its reason (`out_of_scope`, `superseded`,
-`retracted`, or `duplicate`), so you can see why it does not count.
+Every revision left out is listed as an issue with its reason: `out_of_scope`, `superseded`,
+`retracted`, or `duplicate`.
 
 ## Shared information and silence
 
@@ -259,20 +258,20 @@ reports can also be wrong for the same reason, for example two scanners sharing 
 OCBF does not infer that from labels. The model has to contain it explicitly, as a factor that
 connects both observations; factors are introduced on the [model page](model.md).
 
-!!! note "Keep in mind"
+!!! note "A missing report is not a negative report"
 
-    A missing report is not a negative report. `correction` above is an explicit negative
-    report. The absence of a report counts as evidence only when the source was known to be able
-    to report and the model describes how it reports. Without that, a missing end report does not
-    show that `op` never ended.
+    `correction` above is an explicit negative report. The absence of a report counts as evidence
+    only when the source was known to be able to report and the model describes how it reports.
+    Without that, a missing end report does not show that `op` never ended.
 
 ## Summary
 
 - An `EvidenceRecord` stores what a source said, unchanged, with identifiers, a knowledge time,
-  and provenance.
-- A versioned interpreter turns records into `Observation`s about assertions. When no interpreter
-  can read a record, the record becomes an admission issue; OCBF never guesses a meaning.
-- The knowledge cutoff and the chain of revisions decide which reports count.
+  and provenance. Results cite the revisions they used, such as `short:1`.
+- A versioned interpreter turns records into `Observation`s about assertions. A record that no
+  interpreter can read becomes an admission issue.
+- The knowledge cutoff and the chain of revisions decide which reports count. Every revision left
+  out carries its reason: `out_of_scope`, `superseded`, `retracted`, or `duplicate`.
 
 Next, [Parameters and trust](parameters.md) decides how much each observation should count. For
 procedures, see [interpret evidence](../how-to/interpret-evidence.md) and

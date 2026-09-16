@@ -4,7 +4,7 @@
 probabilities depends on how reliable the source is: how often it reports an end that really
 happened, and how often it reports one that did not. In OCBF you state these values yourself, as
 **parameters**. Explicit rules choose the parameters before any probability is computed, and the
-parameters do not change during inference. This page adds the trust values of the running example.
+parameters do not change during inference. The running example gets its trust values here.
 
 ## Observation channels
 
@@ -36,9 +36,9 @@ cautious: a positive report is 1.86x as likely when true as false
 ```
 
 For the conjunction channel, "true" means that the whole scope holds: the event happened *and*
-belongs to `op`. The ratio shows how strongly one report shifts the probabilities. Under the
-nominal values, a positive report is 5.67 times as likely when its scope is true, so it is strong
-evidence. Under the cautious values it is only 1.86 times as likely, which is weak evidence.
+belongs to `op`. The ratio shows how strongly one report shifts the probabilities: 5.67 under the
+nominal values makes a positive report strong evidence, and 1.86 under the cautious values makes
+it weak.
 
 Neither setting means "this report is correct with probability 0.85". The probability that an
 end belongs to `op` also depends on the priors, on the other reports, and on rules between
@@ -168,23 +168,24 @@ separate parameter set: True
 The nominal and cautious settings lead to two answers, and each answer holds only if its trust
 values are right. How much the two answers differ shows how strongly the result depends on the
 trust assumption. [Queries and result meaning](queries.md#different-sources-of-uncertainty)
-compares them. The range between the two answers is not a credible interval. OCBF also does not
-average them, because nothing says how likely each setting is.
+compares them. The range between the two answers is not a credible interval, and OCBF does not
+average them either, because nothing says how likely each setting is.
 
-!!! note "Keep in mind"
+!!! note "Trust values describe sources, not results"
 
-    Trust values describe sources, not results. A sensitivity of 0.85 is an assumption about how
-    the source reports. The probability that `op` took longer than 30 minutes is only known after
-    inference.
+    A sensitivity of 0.85 is an assumption about how the source reports. The probability that
+    `op` took longer than 30 minutes is only known after inference.
 
 ## Summary
 
 - Channel values give the probability of a report when its scope is true and when it is false.
-  Their ratio shows how strongly one report shifts the probabilities.
-- Trust rules are resolved into a `ParameterSet`: the channel values with their stated origins,
-  the priors, and the assumptions. If a value is missing, resolution fails.
-- Changed trust values give a separate calculation. Compare its results with the original ones; do
-  not average them.
+  Their ratio, 5.67 under the nominal values and 1.86 under the cautious ones, shows how
+  strongly one report shifts the probabilities.
+- `resolve_parameters` matches trust rules to each `ChannelKey` (source, family, channel, and
+  producer version) and returns a `ParameterSet`: the channel values with their `origin`, the
+  priors, and the assumptions. A missing value fails resolution.
+- Changed trust values give a separate parameter set with its own `parameter_id`, and a separate
+  calculation whose results are compared with the original ones.
 
 Next, [Models and constraints](model.md) combines the context, evidence, and parameters into
 possible histories. For the procedure, see [configure manual trust](../how-to/configure-trust.md).

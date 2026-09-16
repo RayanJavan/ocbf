@@ -1,9 +1,9 @@
 # Models and constraints
 
-The previous pages built the inputs: candidates and assertions, observations, and parameters. A
-**model** puts these inputs together. It lists the uncertain assertions, the rules that connect
-them, and how strongly each observation favors each combination of values. This page builds the
-model of the running example and shows what compilation adds to it.
+A **model** puts the inputs of the previous pages together. It lists the uncertain assertions
+and the rules that connect them, and it says how strongly each observation favors each
+combination of values. Compiling the model of the running example shows what OCBF adds to the
+one factor you write yourself.
 
 ## Possible histories
 
@@ -205,21 +205,19 @@ happened, which of them belong to `op`, and at what times. It keeps apart two ca
 to confuse: an event that did not happen, and a value that is unknown. This history format is
 internal to OCBF; it is not the OCEL file format.
 
-!!! note "Keep in mind"
+!!! note "Compiling answers nothing yet"
 
-    Compiling a model does not answer anything yet. It fixes what will be calculated, meaning
-    which histories are possible and how each observation weighs them. It computes no probability
-    and picks no history.
+    Compilation fixes which histories are possible and how each observation weighs them. The
+    probabilities come from inference, on the next page.
 
 ## Summary
 
-- A history is one complete combination of values for all assertions. Reports make histories more
-  or less likely; they do not pick one.
-- A `ModelSpec` combines the context, evidence, parameters, your own factors, and decoding.
-  `compile_model` checks the combination and adds the priors, the rules implied by the schema, and
-  one factor per observation.
-- Support makes a history impossible, a descriptive preference makes it less likely, and a
-  normative reference belongs to the query.
+A history is one complete combination of values for all assertions; reports make histories more or
+less likely and never pick one. `compile_model` checks that the context, the evidence, the
+parameters, and your factors fit together, then adds the rest: for the running example, 10
+variables and 20 factors, of which only `at_most_one_end` was written by hand. Support makes a
+history impossible, a descriptive preference makes it less likely, and a normative reference
+belongs to the query.
 
 Next, [Inference and posteriors](inference.md) computes how likely each history is. For the
 procedure, see [configure constraints](../how-to/configure-constraints.md).

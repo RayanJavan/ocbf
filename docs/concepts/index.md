@@ -6,9 +6,9 @@ which objects, such as an Operation, each event belongs to. OCBF does not pick o
 gives each possible history a probability and answers questions about the process, such as "did
 this Operation take too long?", from all of them.
 
-These pages walk through the library with one small example. Each page explains one idea, shows
-the Python objects that represent it, and adds the next piece of the example.
-New term? See the [glossary](../reference/glossary.md).
+These pages walk through the library with one small example. Each page explains one idea and
+shows the Python objects behind it, and the example grows by one piece per page. Terms are
+defined in the [glossary](../reference/glossary.md).
 
 ## The running example
 
@@ -22,15 +22,14 @@ reports cannot both be right, and any report might be false.
 | 11:00 | `op` ended (event `long`) |
 | 12:00 | The assessment is made; nothing later is known |
 
-The question is: **did `op` take longer than a 30-minute reference?** No single report settles
-it:
+The question is: did `op` take longer than a 30-minute reference? No single report settles it,
+and each way of reading the reports is one kind of history:
 
 - If `short` is the real end, `op` took 15 minutes.
 - If `long` is, it took 60.
 - If neither end belongs to `op`, it may still be running at 12:00.
 - If the start report is false, the question may not apply at all.
 
-OCBF computes a probability for each of these histories and answers the question from all of them.
 The [first assessment](../getting-started/quickstart.md) runs this same example as one script,
 `examples/fixed_parameters.py`. These pages build it step by step, so that you can see each part.
 
@@ -76,10 +75,9 @@ does. See the [integration boundary](../how-to/integrate-application.md).
 
 ## Choose the question before the calculation
 
-The probabilities that "`short` belongs to `op`" and that "`long` belongs to `op`", taken
-separately, cannot answer the duration question. The question needs to know which start and which
-end belong to `op` *in the same history*. Before computing anything, OCBF therefore asks which
-combinations of facts the question needs;
+Separate probabilities for "`short` belongs to `op`" and "`long` belongs to `op`" cannot answer
+the duration question, which needs the start and the end of `op` *in the same history*. OCBF
+asks which combinations of facts a question needs before it computes anything;
 [Inference and posteriors](inference.md#choose-the-question-first) shows how.
 
 ## Following the examples
@@ -89,6 +87,11 @@ combinations of facts the question needs;
     The code on these pages forms one program. Each page reuses names defined on earlier pages,
     so run the blocks in order, starting from [Semantic context](semantics.md), in one Python
     session with OCBF installed. All reports, times, and trust values are synthetic.
+
+The blocks use plain Python: dataclasses and `dataclasses.replace`, comprehensions,
+`try`/`except`, and one `with` block, with NumPy only to seed a sampler. On the probability side
+they use priors, marginals, and joint distributions, each defined on the page where it first
+appears.
 
 For step-by-step procedures, see the [how-to guides](../how-to/index.md). For complete rules and
 supported combinations, see the [reference](../reference/index.md).
