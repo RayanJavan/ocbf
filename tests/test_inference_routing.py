@@ -8,6 +8,7 @@ from ocbf.errors import CapabilityError
 from ocbf.inference.contracts import ExecutionPlan, InferencePolicy
 from ocbf.inference.registry import AUTO_ROUTE, builtin_engines
 from ocbf.inference.router import plan_inference
+from ocbf.runtime.control import ExecutionControl
 
 
 @dataclass
@@ -23,13 +24,11 @@ class _StubEngine:
         return ExecutionPlan(self.name, (), 1, 0, ("marginal",))
 
 
-def test_auto_route_names_are_registered():
-    """The auto route can only name engines the registry actually builds."""
+def test_auto_route_covers_every_registered_engine_except_the_documented_two():
     registered = builtin_engines()
     assert set(AUTO_ROUTE) <= set(registered)
-    # gtsam_exact (optional native) and bp (approximate marginals) stay out of auto by design.
-    assert "gtsam_exact" not in AUTO_ROUTE
-    assert "bp" not in AUTO_ROUTE
+    # A newly registered engine silently left out of (or wrongly added to) the route fails here.
+    assert set(registered) - set(AUTO_ROUTE) == {"gtsam_exact", "bp"}
 
 
 def test_auto_selects_first_admitting_engine_over_injected_mapping():
@@ -40,10 +39,27 @@ def test_auto_selects_first_admitting_engine_over_injected_mapping():
     assert declined == list(AUTO_ROUTE[: AUTO_ROUTE.index("blocked")])
 
 
+def test_auto_raises_when_every_route_declines():
+    engines = {name: _StubEngine(name, admits=False) for name in AUTO_ROUTE}
+    with pytest.raises(CapabilityError, match="no admitted engine"):
+        plan_inference(object(), policy=InferencePolicy(engine="auto"), engines=engines)
+
+
 def test_default_policy_routes_to_gtsam_exact():
-    """A call with no policy is defaulted once in the entry to the gtsam_exact route."""
+    """A call with no policy uses the default policy, whose engine is gtsam_exact."""
     plan = plan_inference(object(), engines={"gtsam_exact": _StubEngine("gtsam_exact")})
     assert plan.engine == "gtsam_exact"
+
+
+def test_control_with_control_incapable_engine_is_rejected():
+    engines = {"gtsam_exact": _StubEngine("gtsam_exact")}
+    with pytest.raises(CapabilityError):
+        plan_inference(
+            object(),
+            policy=InferencePolicy(engine="gtsam_exact"),
+            engines=engines,
+            control=ExecutionControl(),
+        )
 
 
 def test_explicit_unregistered_engine_raises():

@@ -1,4 +1,4 @@
-"""Route selection and solve dispatch over supplied engines; the auto route lives in the registry."""
+"""Route selection and solve dispatch over supplied engines."""
 
 from dataclasses import replace
 
@@ -10,12 +10,13 @@ from ocbf.runtime.control import ExecutionControl, checkpoint
 from .registry import AUTO_ROUTE
 
 
-def _engines(engines):
-    if engines is not None:
-        return engines
-    from .registry import builtin_engines
+def _ready(policy, requirements, engines):
+    """Apply the defaults shared by both public entries: policy, requirements, engine set."""
+    if engines is None:
+        from .registry import builtin_engines
 
-    return builtin_engines()
+        engines = builtin_engines()
+    return policy or InferencePolicy(), requirements or QueryRequirements(), engines
 
 
 def _plan(model, requirements, policy, engines, *, store=None, control=None):
@@ -63,9 +64,8 @@ def _plan(model, requirements, policy, engines, *, store=None, control=None):
 def plan_inference(
     model, *, requirements=None, policy=None, engines=None, control=None, store=None
 ):
-    policy = policy or InferencePolicy()
-    requirements = requirements or QueryRequirements()
-    return _plan(model, requirements, policy, _engines(engines), store=store, control=control)
+    policy, requirements, engines = _ready(policy, requirements, engines)
+    return _plan(model, requirements, policy, engines, store=store, control=control)
 
 
 def infer(
@@ -79,9 +79,7 @@ def infer(
     control=None,
     warm_start=None,
 ):
-    policy = policy or InferencePolicy()
-    requirements = requirements or QueryRequirements()
-    engines = _engines(engines)
+    policy, requirements, engines = _ready(policy, requirements, engines)
     plan = _plan(model, requirements, policy, engines, store=store, control=control)
     engine = engines[plan.engine]
     # The sampler owns max_seconds itself and preserves its partial-draw behavior.

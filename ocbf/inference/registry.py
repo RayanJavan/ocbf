@@ -1,4 +1,4 @@
-"""Explicit built-in composition; implementations load during planning/inference only."""
+"""Auto route and built-in engine set; implementations load lazily inside builtin_engines."""
 
 # Route tried in order when ``policy.engine == "auto"``: the first engine compatible within
 # the declared budgets wins. ``gtsam_exact`` (optional native backend) and ``bp`` (approximate
