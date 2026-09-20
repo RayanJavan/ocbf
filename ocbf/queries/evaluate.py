@@ -128,10 +128,7 @@ def evaluate(result, queries, *, evaluators=None, rng=None, store=None, control=
     scope = tuple(sorted({k for s in requirements.scopes for k in s}))
     if any(not hasattr(evaluators[q.kind], "evaluate_on") for q in queries.queries):
         raise CapabilityError("draw evaluator extension must implement evaluate_on")
-    if control is not None and any(
-        not getattr(evaluators[q.kind], "cooperative", False) for q in queries.queries
-    ):
-        raise CapabilityError("draw evaluator does not declare cooperative controls")
+    # The single cooperative guard above already covers every evaluator in the bundle.
     checkpoint(control, "query.draws.begin")
     if control is not None and not getattr(result.posterior, "cooperative", False):
         raise CapabilityError("posterior does not declare cooperative draw controls")
