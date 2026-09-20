@@ -53,11 +53,11 @@ class EvaluationData:
 
 
 def exact_data(posterior, scope, *, store=None, control=None):
-    if control is not None and not hasattr(posterior, "joint_with_context"):
+    if control is not None and not getattr(posterior, "cooperative", False):
         raise CapabilityError("posterior does not declare cooperative joint-table controls")
     table = (
-        posterior.joint_with_context(scope, store=store, control=control)
-        if hasattr(posterior, "joint_with_context")
+        posterior.joint(scope, store=store, control=control)
+        if getattr(posterior, "cooperative", False)
         else posterior.joint(scope)
     )
     size = table.probabilities.size
@@ -149,6 +149,7 @@ def lineage(result, scope):
 @dataclass(frozen=True)
 class ExecutionEvaluator:
     version: str = "1"
+    cooperative = True
 
     def requirements(self, query):
         extra = {k for c in query.conditions for k, _ in c.present_when}
@@ -156,12 +157,6 @@ class ExecutionEvaluator:
         if query.kind in ("whole_job_conformance", "priority_distribution"):
             scopes = (tuple(sorted({k for s in scopes for k in s})),)
         return QueryRequirements(scopes, (), (("joint",), ("joint_draws",)))
-
-    def evaluate_with_context(self, result, query, *, store=None, control=None):
-        return self.evaluate(result, query, store=store, control=control)
-
-    def evaluate_on_with_context(self, result, query, data, *, store=None, control=None):
-        return self.evaluate_on(result, query, data, store=store, control=control)
 
     def evaluate(self, result, query, *, store=None, control=None):
         if query.kind in ("expected_exception_count", "exposure") and len(query.executions) > 1:

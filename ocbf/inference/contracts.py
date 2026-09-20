@@ -119,8 +119,17 @@ class ExecutionPlan:
 class InferenceEngine(Protocol):
     name: str
     version: str
+    cooperative: bool
 
     def assess(
-        self, model, requirements: QueryRequirements, policy: InferencePolicy
+        self,
+        model,
+        requirements: QueryRequirements,
+        policy: InferencePolicy,
+        *,
+        store=None,
+        control=None,
     ) -> ExecutionPlan: ...
-    def solve(self, model, plan, policy, rng) -> InferenceResult: ...
+    def solve(
+        self, model, plan, policy, rng, *, store=None, control=None, warm_start=None
+    ) -> InferenceResult: ...

@@ -18,15 +18,13 @@ from ocbf.runtime.control import checkpoint
 class HybridPosterior:
     conditional: object
     policy: object
+    cooperative = True
 
     @property
     def log_normalizer(self):
         return self.conditional.log_normalizer
 
-    def draw(self, scope, *, rng=None, size=None):
-        return self.draw_with_context(scope, rng=rng, size=size)
-
-    def draw_with_context(self, scope, *, rng=None, size=None, control=None):
+    def draw(self, scope, *, rng=None, size=None, control=None):
         if rng is None:
             raise CapabilityError("hybrid joint drawing requires an explicit random stream")
         size = 4000 if size is None else size
@@ -83,11 +81,9 @@ class HybridPosterior:
 class HybridEngine:
     name: str = "reference_hybrid"
     version: str = "1"
+    cooperative = True
 
-    def assess(self, model, requirements, policy):
-        return self.assess_with_context(model, requirements, policy)
-
-    def assess_with_context(self, model, requirements, policy, *, store=None, control=None):
+    def assess(self, model, requirements, policy, *, store=None, control=None):
         capabilities = ("joint_draws", "normalizer")
         if not requirements.satisfied_by(capabilities):
             raise CapabilityError("hybrid route supplies joint draws and a normalizer")
@@ -108,12 +104,7 @@ class HybridEngine:
             {"integration": "analytical conditional Gaussian; no truncation approximation"},
         )
 
-    def solve(self, model, plan, policy, rng):
-        return self.solve_with_context(model, plan, policy, rng)
-
-    def solve_with_context(
-        self, model, plan, policy, rng, *, store=None, control=None, warm_start=None
-    ):
+    def solve(self, model, plan, policy, rng, *, store=None, control=None, warm_start=None):
         if warm_start is not None:
             raise CapabilityError("hybrid exact inference does not use sampler warm starts")
         if store is not None and not reusable_model(model):

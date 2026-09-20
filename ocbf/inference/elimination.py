@@ -261,6 +261,7 @@ class EliminationPosterior:
     log_normalizer: float
     policy: object
     _artifact_id: str | None = field(default=None, init=False, repr=False, compare=False)
+    cooperative = True
 
     def __post_init__(self):
         object.__setattr__(self, "domains", freeze(self.domains))
@@ -313,9 +314,6 @@ class EliminationPosterior:
     def marginal(self, key):
         return self.joint((key,))
 
-    def joint_with_context(self, scope, *, store=None, control=None):
-        return self.joint(scope, store=store, control=control)
-
     def draw_assignment(self, rng):
         state = {}
         for conditional in reversed(self.conditionals):
@@ -334,10 +332,7 @@ class EliminationPosterior:
             state[key] = self.domains[key][rng.choice(len(logs), p=np.exp(logs - z))]
         return state
 
-    def draw(self, scope, *, rng=None, size=None):
-        return self.draw_with_context(scope, rng=rng, size=size)
-
-    def draw_with_context(self, scope, *, rng=None, size=None, control=None):
+    def draw(self, scope, *, rng=None, size=None, control=None):
         if rng is None:
             raise CapabilityError("joint drawing requires an explicit random stream")
         if not set(scope) <= self.domains.keys():

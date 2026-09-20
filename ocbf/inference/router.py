@@ -30,15 +30,14 @@ def _plan(model, requirements, policy, engines, *, store=None, control=None):
             error = CapabilityError("engine not registered", key=name)
         else:
             try:
-                if control is not None and not hasattr(engine, "assess_with_context"):
+                cooperative = getattr(engine, "cooperative", False)
+                if control is not None and not cooperative:
                     raise CapabilityError(
                         "engine does not declare cooperative planning controls", key=name
                     )
                 plan = (
-                    engine.assess_with_context(
-                        model, requirements, policy, store=store, control=control
-                    )
-                    if hasattr(engine, "assess_with_context")
+                    engine.assess(model, requirements, policy, store=store, control=control)
+                    if cooperative
                     else engine.assess(model, requirements, policy)
                 )
                 checkpoint(control, "inference.planned")
@@ -89,8 +88,8 @@ def infer(
             if control is not None
             else ExecutionControl(timeout_seconds=policy.max_seconds)
         )
-    if hasattr(engine, "solve_with_context"):
-        return engine.solve_with_context(
+    if getattr(engine, "cooperative", False):
+        return engine.solve(
             model, plan, policy, rng, store=store, control=control, warm_start=warm_start
         )
     if control is not None or warm_start is not None:

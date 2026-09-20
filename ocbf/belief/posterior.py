@@ -65,7 +65,9 @@ class MarginalProvider(Protocol):
 
 
 class JointProvider(MarginalProvider, Protocol):
-    def joint(self, scope: tuple[str, ...]) -> JointTable: ...
+    cooperative: bool
+
+    def joint(self, scope, *, store=None, control=None) -> JointTable: ...
 
 
 @dataclass(frozen=True)
@@ -116,7 +118,9 @@ class JointDrawSet:
 
 
 class JointDrawProvider(Protocol):
-    def draw(self, scope, *, rng=None, size=None) -> JointDrawSet: ...
+    cooperative: bool
+
+    def draw(self, scope, *, rng=None, size=None, control=None) -> JointDrawSet: ...
 
 
 class ConditionalReconstruction(Protocol):

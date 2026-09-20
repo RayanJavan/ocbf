@@ -37,9 +37,10 @@ state and proposal correction are validated.
 
 ## Add optional execution support
 
-Controlled engines expose `assess_with_context` and `solve_with_context`.
-Controlled evaluators/posteriors supply their corresponding context-aware operations.
-Requesting unsupported controls fails explicitly.
+Cooperative engines, evaluators, and posteriors declare `cooperative = True` and accept the
+execution store and control in their standard operations; solving also accepts an optional
+warm start. An implementation that does not declare cooperation is handed no control, and
+passing it a control it has not declared fails explicitly.
 
 Reusable interpreters, channels, and kernels can declare an immutable `reuse_key`
 covering implementation version and every configuration dependency. Missing dependencies
