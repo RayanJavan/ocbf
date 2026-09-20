@@ -18,15 +18,13 @@ from ocbf.runtime.control import checkpoint
 class HybridPosterior:
     conditional: object
     policy: object
+    cooperative = True
 
     @property
     def log_normalizer(self):
         return self.conditional.log_normalizer
 
-    def draw(self, scope, *, rng=None, size=None):
-        return self.draw_with_context(scope, rng=rng, size=size)
-
-    def draw_with_context(self, scope, *, rng=None, size=None, control=None):
+    def draw(self, scope, *, rng=None, size=None, control=None):
         if rng is None:
             raise CapabilityError("hybrid joint drawing requires an explicit random stream")
         size = 4000 if size is None else size

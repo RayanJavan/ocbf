@@ -73,7 +73,7 @@ def evaluate(result, queries, *, evaluators=None, rng=None, store=None, control=
     if not requirements.satisfied_by(result.capabilities):
         raise CapabilityError("posterior lacks the joint information required by this query bundle")
     if control is not None and any(
-        not hasattr(evaluators[q.kind], "evaluate_with_context") for q in queries.queries
+        not getattr(evaluators[q.kind], "cooperative", False) for q in queries.queries
     ):
         raise CapabilityError("evaluator does not declare cooperative controls")
     from .aggregation import draw_data
@@ -90,16 +90,13 @@ def evaluate(result, queries, *, evaluators=None, rng=None, store=None, control=
                     total=len(queries.queries),
                 )
                 evaluator = evaluators[query.kind]
-                method = "evaluate_with_context" if data is None else "evaluate_on_with_context"
-                if hasattr(evaluator, method):
-                    args = (result, query) if data is None else (result, query, data)
-                    estimate = getattr(evaluator, method)(*args, store=store, control=control)
-                else:
-                    estimate = (
-                        evaluator.evaluate(result, query)
-                        if data is None
-                        else evaluator.evaluate_on(result, query, data)
-                    )
+                args = (result, query) if data is None else (result, query, data)
+                base = evaluator.evaluate if data is None else evaluator.evaluate_on
+                estimate = (
+                    base(*args, store=store, control=control)
+                    if getattr(evaluator, "cooperative", False)
+                    else base(*args)
+                )
                 estimates.append(estimate)
         except ExecutionStopped as exc:
             if not estimates:
@@ -132,15 +129,15 @@ def evaluate(result, queries, *, evaluators=None, rng=None, store=None, control=
     if any(not hasattr(evaluators[q.kind], "evaluate_on") for q in queries.queries):
         raise CapabilityError("draw evaluator extension must implement evaluate_on")
     if control is not None and any(
-        not hasattr(evaluators[q.kind], "evaluate_on_with_context") for q in queries.queries
+        not getattr(evaluators[q.kind], "cooperative", False) for q in queries.queries
     ):
         raise CapabilityError("draw evaluator does not declare cooperative controls")
     checkpoint(control, "query.draws.begin")
-    if control is not None and not hasattr(result.posterior, "draw_with_context"):
+    if control is not None and not getattr(result.posterior, "cooperative", False):
         raise CapabilityError("posterior does not declare cooperative draw controls")
     common = (
-        result.posterior.draw_with_context(scope, rng=rng, control=control)
-        if hasattr(result.posterior, "draw_with_context")
+        result.posterior.draw(scope, rng=rng, control=control)
+        if getattr(result.posterior, "cooperative", False)
         else result.posterior.draw(scope, rng=rng)
     )
     checkpoint(control, "query.draws.end", allocation_bytes=8 * prod(common.shape))

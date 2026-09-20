@@ -17,6 +17,7 @@ from ocbf.inference.elimination import materialize_factors
 @dataclass(frozen=True)
 class MarginalPosterior:
     tables: tuple[JointTable, ...]
+    cooperative = False
 
     def marginal(self, key):
         for table in self.tables:
