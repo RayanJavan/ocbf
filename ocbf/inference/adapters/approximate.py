@@ -75,8 +75,11 @@ class _TableBank:
 class BPEngine:
     name: str = "bp"
     version: str = "1"
+    cooperative = False
 
-    def assess(self, model, requirements, policy):
+    def assess(self, model, requirements, policy, *, store=None, control=None):
+        if control is not None:
+            raise CapabilityError("BP does not honor cooperative controls", key=self.name)
         if model.continuous:
             raise CapabilityError("BP adapter admits finite targets only")
         if not policy.allow_approximate:
@@ -93,7 +96,11 @@ class BPEngine:
             raise BudgetExceeded("BP table exceeds max_table_states")
         return ExecutionPlan(self.name, (), largest, 0, ("marginal",))
 
-    def solve(self, model, plan, policy, rng):
+    def solve(self, model, plan, policy, rng, *, store=None, control=None, warm_start=None):
+        if control is not None or warm_start is not None:
+            raise CapabilityError(
+                "BP does not honor cooperative controls or warm starts", key=self.name
+            )
         from ocbf.inference.loopy_bp import run_bp
         from ocbf.model.graph import FactorGraph
 

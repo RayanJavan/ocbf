@@ -54,11 +54,3 @@ class DependencyIndex:
     def changed_values(self, previous_numerics):
         keys = set(self.numerics) | set(previous_numerics)
         return tuple(sorted(k for k in keys if self.numerics.get(k) != previous_numerics.get(k)))
-
-
-class ControlledEngine(Protocol):
-    """Optional capability; the original assess/solve protocol remains valid."""
-
-    def solve_with_context(
-        self, model, plan, policy, rng, *, store=None, control=None, warm_start=None
-    ): ...

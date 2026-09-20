@@ -24,11 +24,9 @@ from ocbf.runtime.control import checkpoint
 class ExactEngine:
     name: str = "gtsam_exact"
     version: str = "1"
+    cooperative = True
 
-    def assess(self, model, requirements, policy):
-        return self.assess_with_context(model, requirements, policy)
-
-    def assess_with_context(self, model, requirements, policy, *, store=None, control=None):
+    def assess(self, model, requirements, policy, *, store=None, control=None):
         if model.continuous:
             raise CapabilityError("finite exact adapter does not integrate continuous variables")
         capabilities = ("marginal", "joint", "expectation", "normalizer", "joint_draws")
@@ -47,12 +45,7 @@ class ExactEngine:
             raise CapabilityError("unknown exact engine", key=self.name)
         return ExecutionPlan(self.name, order, inputs, clique, capabilities)
 
-    def solve(self, model, plan, policy, rng):
-        return self.solve_with_context(model, plan, policy, rng)
-
-    def solve_with_context(
-        self, model, plan, policy, rng, *, store=None, control=None, warm_start=None
-    ):
+    def solve(self, model, plan, policy, rng, *, store=None, control=None, warm_start=None):
         if warm_start is not None:
             raise CapabilityError("exact inference does not use sampler warm starts")
         # Unknown kernel implementations may depend on unrecorded state.

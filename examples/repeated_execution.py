@@ -109,13 +109,14 @@ def worker(workload, mode):
     class MeasuredEngine:
         # Instrument the existing assessment; never plan twice to obtain phase timings.
         name, version = PROTOCOL["engine"], "1"
+        cooperative = ExactEngine.cooperative
         delegate = ExactEngine(name)
 
-        def assess_with_context(self, *args, **kw):
-            return timed("plan", lambda: self.delegate.assess_with_context(*args, **kw))
+        def assess(self, *args, **kw):
+            return timed("plan", lambda: self.delegate.assess(*args, **kw))
 
-        def solve_with_context(self, *args, **kw):
-            return self.delegate.solve_with_context(*args, **kw)
+        def solve(self, *args, **kw):
+            return self.delegate.solve(*args, **kw)
 
     engines = {PROTOCOL["engine"]: MeasuredEngine()}
 

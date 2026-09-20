@@ -83,11 +83,9 @@ class HybridPosterior:
 class HybridEngine:
     name: str = "reference_hybrid"
     version: str = "1"
+    cooperative = True
 
-    def assess(self, model, requirements, policy):
-        return self.assess_with_context(model, requirements, policy)
-
-    def assess_with_context(self, model, requirements, policy, *, store=None, control=None):
+    def assess(self, model, requirements, policy, *, store=None, control=None):
         capabilities = ("joint_draws", "normalizer")
         if not requirements.satisfied_by(capabilities):
             raise CapabilityError("hybrid route supplies joint draws and a normalizer")
@@ -108,12 +106,7 @@ class HybridEngine:
             {"integration": "analytical conditional Gaussian; no truncation approximation"},
         )
 
-    def solve(self, model, plan, policy, rng):
-        return self.solve_with_context(model, plan, policy, rng)
-
-    def solve_with_context(
-        self, model, plan, policy, rng, *, store=None, control=None, warm_start=None
-    ):
+    def solve(self, model, plan, policy, rng, *, store=None, control=None, warm_start=None):
         if warm_start is not None:
             raise CapabilityError("hybrid exact inference does not use sampler warm starts")
         if store is not None and not reusable_model(model):

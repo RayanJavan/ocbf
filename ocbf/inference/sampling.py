@@ -74,15 +74,13 @@ def _blocks(model, codec, sampled):
 class BlockedEngine:
     name: str = "blocked"
     version: str = "1"
+    cooperative = True
     proposals: object = field(default_factory=dict, repr=False, compare=False)
 
     def __post_init__(self):
         object.__setattr__(self, "proposals", MappingProxyType(dict(self.proposals)))
 
-    def assess(self, model, requirements, policy):
-        return self.assess_with_context(model, requirements, policy)
-
-    def assess_with_context(self, model, requirements, policy, *, store=None, control=None):
+    def assess(self, model, requirements, policy, *, store=None, control=None):
         checkpoint(control, "sampling.assess")
         config = policy.sampling
         if config is None:
@@ -189,12 +187,7 @@ class BlockedEngine:
             },
         )
 
-    def solve(self, model, plan, policy, rng):
-        return self.solve_with_context(model, plan, policy, rng)
-
-    def solve_with_context(
-        self, model, plan, policy, rng, *, store=None, control=None, warm_start=None
-    ):
+    def solve(self, model, plan, policy, rng, *, store=None, control=None, warm_start=None):
         if rng is None:
             raise CapabilityError("blocked inference requires an explicit random stream")
         config, codec = policy.sampling, plan.details["codec"]
