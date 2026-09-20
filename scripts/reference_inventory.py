@@ -40,7 +40,6 @@ GROUPS = {
     "Inference and belief": (
         "ocbf.inference.contracts",
         "ocbf.inference.router",
-        "ocbf.inference.planning",
         "ocbf.inference.registry",
         "ocbf.inference.adapters.exact",
         "ocbf.inference.adapters.hybrid",

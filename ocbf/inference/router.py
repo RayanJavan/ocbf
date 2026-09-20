@@ -1,31 +1,71 @@
-"""Composition facade for explicit routing and opt-in capability-based selection."""
+"""Route selection and solve dispatch over supplied engines."""
+
+from dataclasses import replace
 
 from ocbf.belief.posterior import QueryRequirements
 from ocbf.errors import CapabilityError
 from ocbf.inference.contracts import InferencePolicy
 from ocbf.runtime.control import ExecutionControl, checkpoint
 
+from .registry import AUTO_ROUTE
 
-def plan_inference(
-    model, *, requirements=None, policy=None, engines=None, control=None, store=None
-):
-    from .planning import plan_inference as plan
 
+def _ready(policy, requirements, engines):
+    """Apply the defaults shared by both public entries: policy, requirements, engine set."""
     if engines is None:
         from .registry import builtin_engines
 
         engines = builtin_engines()
+    return policy or InferencePolicy(), requirements or QueryRequirements(), engines
+
+
+def _plan(model, requirements, policy, engines, *, store=None, control=None):
+    """First engine, in requested/auto order, compatible within budgets; inputs already defaulted."""
     checkpoint(control, "inference.plan")
-    result = plan(
-        model,
-        requirements=requirements,
-        policy=policy,
-        engines=engines,
-        store=store,
-        control=control,
+    names = AUTO_ROUTE if policy.engine == "auto" else (policy.engine,)
+    considered = []
+    for name in names:
+        engine = engines.get(name)
+        if engine is None:
+            error = CapabilityError("engine not registered", key=name)
+        else:
+            try:
+                if control is not None and not hasattr(engine, "assess_with_context"):
+                    raise CapabilityError(
+                        "engine does not declare cooperative planning controls", key=name
+                    )
+                plan = (
+                    engine.assess_with_context(
+                        model, requirements, policy, store=store, control=control
+                    )
+                    if hasattr(engine, "assess_with_context")
+                    else engine.assess(model, requirements, policy)
+                )
+                checkpoint(control, "inference.planned")
+                return replace(
+                    plan,
+                    details={
+                        **plan.details,
+                        "selection": tuple(considered),
+                        "selected_reason": "first compatible route within declared budgets",
+                        "requested_policy": policy.engine,
+                    },
+                )
+            except CapabilityError as exc:
+                error = exc
+        if policy.engine != "auto":
+            raise error
+        considered.append({"engine": name, "reason": str(error)})
+    raise CapabilityError(
+        "no admitted engine: " + "; ".join(f"{r['engine']}: {r['reason']}" for r in considered)
     )
-    checkpoint(control, "inference.planned")
-    return result
+
+
+def plan_inference(
+    model, *, requirements=None, policy=None, engines=None, control=None, store=None
+):
+    policy, requirements, engines = _ready(policy, requirements, engines)
+    return _plan(model, requirements, policy, engines, store=store, control=control)
 
 
 def infer(
@@ -39,20 +79,8 @@ def infer(
     control=None,
     warm_start=None,
 ):
-    policy = policy or InferencePolicy()
-    requirements = requirements or QueryRequirements()
-    if engines is None:
-        from .registry import builtin_engines
-
-        engines = builtin_engines()
-    plan = plan_inference(
-        model,
-        requirements=requirements,
-        policy=policy,
-        engines=engines,
-        control=control,
-        store=store,
-    )
+    policy, requirements, engines = _ready(policy, requirements, engines)
+    plan = _plan(model, requirements, policy, engines, store=store, control=control)
     engine = engines[plan.engine]
     # The sampler owns max_seconds itself and preserves its partial-draw behavior.
     if policy.max_seconds is not None and plan.engine != "blocked":
