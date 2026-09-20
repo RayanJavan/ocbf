@@ -51,7 +51,6 @@ sources for each section are also readable in this repository:
 - [Capabilities](docs/reference/capabilities.md): supported routes and their boundaries.
 - [Architecture](docs/development/architecture.md): module responsibilities and extension seams.
 - [Integrate an application](docs/how-to/integrate-application.md): application inputs and the Mammut example.
-- [Research](research/README.md): separate dated investigations and proposals.
 
 OCBF preserves evidence gaps and model qualifications. Numerical agreement does not
 establish physical factory accuracy. The Mammut example requires verified source and
